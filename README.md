@@ -49,7 +49,7 @@ Let's say we are currently on the wave table FX. For the purpose of simplicity w
 ## Project Proposal
 
 ### Team Members:
-torre324, 
+torre324, bradfoh
 
 ### Project Objectives
 
