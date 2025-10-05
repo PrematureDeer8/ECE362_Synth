@@ -1,4 +1,52 @@
-## Synthesizer
+# Synthesizer
+
+## Design Overview
+The high level design of this synth can be visualized in the figure below: 
+![High Level Design](img/highlevelsynthdiagram.jpeg)
+
+### Midi Controller
+The midi controller will use UART to send midi information to the proton board. The three pieces of information contained in the midi are: 
+<ul>
+<li>key status (pressed/released)</li>
+<li>keynote (C, D#, etc..)</li>
+<li>velocity </li>
+</ul>
+
+![Midi Controller Schem](img/MidiDecoderSchem.jpeg)
+
+
+These three pieces of **sequential** information will be used to represent this signal digitally. Each note has a corresponding frequency associated with it. For example, middle C note is the frequency 261.63Hz (A440 tuning system). We will need a lookup table to translate the key note to a frequency. Luckily our lookup table will only need to span one octave since the relationship between two notes an octave apart is $f_{low} * 2 = f_{high}$. <br/>
+
+With the velocity information also a part of the midi data, we can implement one of two things: the amplitude of the wave sensitive to velocity or the attack of the wave sensity to velocity. Implementing velocity sensitive attack will most likely be more difficult than simply being amplitude sensitive.
+
+#### Attack vs Amplitude
+The attack controls how fast the sound will get to its highest volume when the key is first pressed. A faster attack means a more percusive sound. On the other hand, a slower attack means that the sound will crescendo over a longer time to its highest volume. As for the amplitude, it simply adjusts the overall volume of the sound. It can not create crescendos or swells that will dynamically change the sound when you play a note.
+
+
+### ADC Controller
+
+The ADC controller will be in charge of sending analog inputs into the FXs chain of the synthesizer.
+
+![ADC controller](img/ADCController.jpeg)
+
+For now we will have three ADC channels that correspond to three potentiometers. These channels should use the **DMA** to read from the ADC FIFO and write to a specified address so that we don't add any unncessary computation for the CPU.
+
+Additionally, there will be three buttons that will correspond to three different types of FXs. There will be one button for the wavetable, and two buttons for the other two FXs. When toggling the button, the synthesizer will intepret the ADC channels as parameters specific to the corresponding FXs. For example if the wave table button was toggled:
+<ul>
+    <li> potentiometer 1 will adjust the type of wave generated (sine, sawtooth, square, etc...)</li>
+    <li> potentiometer 2 will adjust the decay of the wave (does the sound get softer the longer it's played)</li>
+    <li>potentiometer 3 will adjust the mix of the signal (overall volume)</li>
+
+</ul> 
+
+While this design allows us to use our ADC channels sparingly (RP2350 only has 8), we need to address what happens between toggling different buttons as there will be discontinuity in parameter values from the previous state to the current state.
+
+### Parameter Discontinuity Issue
+The parameter discontinuity issue arises when the following happens: <br />
+
+Let's say we are currently on the wave table FX. For the purpose of simplicity we will say that each potentiometer has 3 discrete modes mode 0, 1, and 2. I want to turn the first potentiometer to mode 1 for a sawtooth wave. Then I want to adjust the mix of the signal to be at full volume so I turn the mode of the potentiometer 3 to mode 2. Finally, I adjust the decay of the wave to mode 0.
+
+## Project Proposal
 
 ### Team Members:
 torre324, 
