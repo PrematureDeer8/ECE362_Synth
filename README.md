@@ -54,7 +54,7 @@ torre324, bradfoh
 ### Project Objectives
 
 <ul>
-    <li>An ability to use an external DAC to implement sinusodal waveforms for the oscillator </li>
+    <li>An ability to use the (DMA/systick timer) to (move ADC FIFO values to program variable/create a reference BPM for FX echo)  </li>
     <li>An ability to configure GPIO pins to read ADC input in order to adjust the parameters for the FX chain</li>
     <li>An ability to use PIO peripheral to implement the I2S protocol for communicating with the DAC
     <li>An ability to use UART in order to read midi data from a midi controller </li>
