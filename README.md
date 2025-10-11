@@ -68,6 +68,7 @@ The goal of this project is to make a single oscillator synthesizer. The midi co
 
 [Midi Controller](https://www.amazon.com/Donner-N-25-Controlle-Velocity-Sensitive-Production/dp/B0C1ZC45F5/?_encoding=UTF8&pd_rd_w=Grd2g&content-id=amzn1.sym.4efc43db-939e-4a80-abaf-50c6a6b8c631%3Aamzn1.symc.5a16118f-86f0-44cd-8e3e-6c5f82df43d0&pf_rd_p=4efc43db-939e-4a80-abaf-50c6a6b8c631&pf_rd_r=B1KF2GA14WK6RNKPRT24&pd_rd_wg=U7XjY&pd_rd_r=86d487fc-a9b1-4629-b7ee-289ac83ccf03&ref_=pd_hp_d_atf_ci_mcx_mr_ca_hp_atf_d&th=1)<br />
 [DAC PCM5102A](https://www.amazon.com/dp/B09C5QX228?ref=ppx_yo2ov_dt_b_fed_asin_title)<br />
+SMH1602 LCD - In Lab kit <br />
 10K potentiometers - In lab Kit <br />
 Buttons - In Lab Kit
 
