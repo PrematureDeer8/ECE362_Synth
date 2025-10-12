@@ -1,0 +1,7 @@
+.program I2S
+    set pindirs, 1
+
+BCLK:
+    set pins, 1 [1] ;Drive pin high and delay for one cycle
+    set pins, 0
+    jmp BCLK
