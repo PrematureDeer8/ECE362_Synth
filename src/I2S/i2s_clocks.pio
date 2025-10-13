@@ -1,0 +1,22 @@
+.program i2s_clocks
+.side_set 2
+
+; This program generates LRCLK and BCLK for a 16-bit, stereo I2S bus.
+
+public entry_point:
+    set x, 14        side 0b11 ; Start with LRCLK=H, BCLK=H
+
+bitloop1:                        ; Right channel, LRCLK is HIGH
+    out pins, 1      side 0b10 ; LRCLK=H, BCLK=L
+    jmp x-- bitloop1 side 0b11 ; LRCLK=H, BCLK=H. Loop 15 times.
+
+    out pins, 1      side 0b00 ; 16th BCLK low phase, AND flip LRCLK to LOW
+    set x, 14        side 0b01 ; 16th BCLK high phase, AND reset x for next loop
+
+bitloop0:                        ; Left channel, LRCLK is LOW
+    out pins, 1      side 0b00 ; LRCLK=L, BCLK=L
+    jmp x-- bitloop0 side 0b01 ; LRCLK=L, BCLK=H. Loop 15 times.
+
+    out pins, 1      side 0b10 ; 16th BCLK low phase, AND flip LRCLK to HIGH
+    ; jmp bitloop1     side 0b11 ; 16th BCLK high phase AND loop back
+

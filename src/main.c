@@ -1,34 +1,21 @@
 #include <pico/stdlib.h>
 #include <stdio.h>
-#include "hardware/pio.h"
-#include "I2S/I2S.pio.h"
+#include <stdlib.h>
+
 #include "I2S/I2S.h"
 
 
-int main(void){
-
-    //set BCLK to pin 4
-    const uint BCLK = 4;
-
-    PIO I2S_pio = pio0;
-
-    //load I2S program instructions into a PIO instance
-    for(uint i = 0; i < count_of(I2S_program_instructions); i++){
-        I2S_pio->instr_mem[i] = I2S_program_instructions[i];
-    }
-    printf("Instruction count: %d\n", count_of(I2S_program_instructions));
-
-    //calculate clock division
-    double cdr = get_clock_div_ratio(SAMPLE_RATE, CHANNELS, AUDIO_BITS, count_of(I2S_program_instructions));
-
-    //set state machine 1's clock divider to the clock division ratio (cdr)
-    I2S_pio->sm[0].clkdiv = (uint32_t) (cdr * (1 << 16));
+int main() {
     
-    //we can choose to set 5 pins in the state machine
-    I2S_pio->sm[0].pinctrl = 
-        (1 << PIO_SM0_PINCTRL_SET_COUNT_LSB) |
-        (BCLK << PIO_SM0_PINCTRL_SET_BASE_LSB) ;
-
-    return 0;
+    uint sm = I2S_init();
+    uint32_t* audio_buffer = malloc(sizeof(*audio_buffer) * AUDIO_BUFFER_SIZE);
+    //lets put in an alternating pattern of 11110000 for each channel
+    for(int i = 0; i < AUDIO_BUFFER_SIZE; i++){
+        audio_buffer[i] = (0xF0F0ul << 16) | (0xFF00u << 0);
+    }
+    while (true) {
+        write_audio_buffer(pio0, sm, audio_buffer, AUDIO_BUFFER_SIZE);
+    }
+    free(audio_buffer);
 }
 
