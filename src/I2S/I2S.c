@@ -4,18 +4,19 @@ float get_clock_div_ratio(float sample_rate, float channels, float audio_bits, i
     return SYS_CLK_HZ / (sample_rate * audio_bits * channels * instruction_count);
 }
 
-uint I2S_init(){
+void I2S_init(I2S* inst){
     // 1. Define your I2S pins
-    const uint BCLK_PIN = 5;
+    const uint BCLK_PIN = inst->BCLK;
     // The LRCLK pin must be the next consecutive pin for this PIO program
     const uint LRCLK_PIN = BCLK_PIN + 1; // This will be GPIO 6
-    const uint TX_PIN = 10;
+    const uint TX_PIN = inst->TX_PIN;
 
     // 2. Choose a PIO instance (pio0 or pio1)
-    PIO pio = pio0;
+    PIO pio = inst->pio;
 
     // 3. Claim a free state machine on our chosen PIO instance
     uint sm = pio_claim_unused_sm(pio, true);
+    inst->sm = sm;
 
     // 4. Load the PIO program into the PIO's instruction memory
     uint offset = pio_add_program(pio, &i2s_clocks_program);
@@ -51,13 +52,65 @@ uint I2S_init(){
 
     pio_sm_set_enabled(pio, sm, true);
 
-    return sm;
-
 }
 
-void write_audio_buffer(PIO i2s, uint sm, uint32_t* audio_buffer, uint audio_buffer_len){
+void init_dma_for_I2S(I2S* inst, uint32_t* audio_buffer){
+
+    dma_channel_config c = dma_channel_get_default_config(I2S_DMA_CHANNEL);
+    pio_hw_t* pio_hw;
+
+    if(inst->pio == pio0){
+        pio_hw = pio0_hw; 
+    }else if(inst->pio == pio1){
+        pio_hw = pio1_hw;
+    }else if(inst->pio == pio2){
+        pio_hw = pio2_hw;
+    }else{
+        //something went wrong (there are only 3 pio instances)
+        return;
+    }
+
+    dma_hw->ch[I2S_DMA_CHANNEL].read_addr = audio_buffer;
+    dma_hw->ch[I2S_DMA_CHANNEL + 1].read_addr = audio_buffer + AUDIO_BUFFER_SIZE; // go to next half
+
+    //dma (only one bus transfer)
+    dma_hw->ch[I2S_DMA_CHANNEL].transfer_count = (0u << 28) + 1u;
+    dma_hw->ch[I2S_DMA_CHANNEL + 1].transfer_count = (0u << 28) + 1u;
+
+    uint32_t* write_addr = &pio_hw->txf[inst->sm];
+    dma_hw->ch[I2S_DMA_CHANNEL].write_addr = write_addr;
+    dma_hw->ch[I2S_DMA_CHANNEL + 1].write_addr = write_addr;
+
+    dma_hw->ch[I2S_DMA_CHANNEL].ctrl_trig = 0;
+    dma_hw->ch[I2S_DMA_CHANNEL + 1].ctrl_trig = 0;
+    uint32_t temp = 0;
+    temp |= 2u << 2; //set packet size to (one word)
+    temp |= DREQ_PIO0_TX0 << 17; //set data request to PIO TX0
+    temp |= 1 << 4; //increment read address after every transfer
+    temp |= 3 << 4; //set the ring buffer size to 8 bytes (2**3)
+    temp |= 1u << 0; // enable dma
+    dma_hw->ch[I2S_DMA_CHANNEL + 1].ctrl_trig = temp;
+    dma_hw->ch[I2S_DMA_CHANNEL].ctrl_trig = temp | (1 << 13); //chain_to channel I2S_DMA_CHANNEL + 1
+
+    dma_irqn_set_channel_enabled(DMA_IRQ_0, I2S_DMA_CHANNEL, 1);
+    dma_irqn_set_channel_enabled(DMA_IRQ_0, I2S_DMA_CHANNEL + 1, 1);
+
+    irq_set_exclusive_handler(DMA_IRQ_0, dma_isr);
+    irq_set_enabled(DMA_IRQ_0, 1);
+
+
+}
+void dma_isr(){
+    if(dma_irqn_get_channel_status(DMA_IRQ_0, I2S_DMA_CHANNEL)){
+        dma_irqn_acknowledge_channel(DMA_IRQ_0, I2S_DMA_CHANNEL);
+    }else{
+        dma_irqn_acknowledge_channel(DMA_IRQ_0, I2S_DMA_CHANNEL + 1);
+    }
+}
+
+void write_audio_buffer(I2S* inst, uint32_t* audio_buffer, uint audio_buffer_len){
     for(int i = 0; i < audio_buffer_len; i++){
-        pio_sm_put_blocking(i2s, sm, audio_buffer[i]);
+        pio_sm_put_blocking(inst->pio, inst->sm, audio_buffer[i]);
     }
 }
 
