@@ -65,10 +65,10 @@ void init_dma_for_I2S(I2S* inst, volatile uint32_t* audio_buffer){
         dreq_num = DREQ_PIO0_TX0 + inst->sm;
     }else if(inst->pio == pio1){
         pio_hw = pio1_hw;
-        dreq_num = DREQ_PIO0_TX0 + inst->sm;
+        dreq_num = DREQ_PIO1_TX0 + inst->sm;
     }else if(inst->pio == pio2){
         pio_hw = pio2_hw;
-        dreq_num = DREQ_PIO0_TX0 + inst->sm;
+        dreq_num = DREQ_PIO2_TX0 + inst->sm;
     }else{
         //something went wrong (there are only 3 pio instances)
         return;
@@ -91,7 +91,7 @@ void init_dma_for_I2S(I2S* inst, volatile uint32_t* audio_buffer){
     temp |= 2u << 2; //set packet size to (one word)
     temp |= dreq_num << 17; //set data request to PIO TX0
     temp |= 1 << 4; //increment read address after every transfer
-    temp |= 8 << 8; //set the ring buffer size to 256 bytes (2**8)
+    temp |= (uint)(log2f(SAMPLE_RATE)) << 8; //set the ring buffer size to 256 bytes (2**8)
     temp |= 1u << 0; // enable dma
     dma_hw->ch[I2S_DMA_CHANNEL + 1].ctrl_trig = temp;
     dma_hw->ch[I2S_DMA_CHANNEL].ctrl_trig = temp | (1 << 13); //chain_to channel I2S_DMA_CHANNEL + 1
@@ -110,8 +110,12 @@ void dma_isr(){
     dma_interrupt_fired = true;
     if(dma_irqn_get_channel_status(DMA_IRQ_0, I2S_DMA_CHANNEL)){
         dma_irqn_acknowledge_channel(DMA_IRQ_0, I2S_DMA_CHANNEL);
+
+        //load in next audio data 0 - 255
     }else{
         dma_irqn_acknowledge_channel(DMA_IRQ_0, I2S_DMA_CHANNEL + 1);
+        
+        //load in next audio data 256 - 511
     }
 }
 
