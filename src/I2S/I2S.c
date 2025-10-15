@@ -1,5 +1,8 @@
 #include "I2S.h"
 
+volatile bool toggle_a = 0;
+volatile bool toggle_b = 0;
+
 float get_clock_div_ratio(float sample_rate, float channels, float audio_bits, int instruction_count){
     return SYS_CLK_HZ / (sample_rate * audio_bits * channels * instruction_count);
 }
@@ -54,74 +57,161 @@ void I2S_init(I2S* inst){
 
 }
 
+/*void init_dma_for_I2S(I2S* inst, volatile uint32_t* audio_buffer){
+
+    dma_channel_config cfg_a = dma_channel_get_default_config(I2S_DMA_CHANNEL_A);
+    channel_config_set_transfer_data_size(&cfg_a, DMA_SIZE_32);
+    channel_config_set_read_increment(&cfg_a, true);
+    channel_config_set_write_increment(&cfg_a, false);
+    channel_config_set_dreq(&cfg_a, pio_get_dreq(inst->pio, inst->sm, true));
+    // When Channel A finishes, it will trigger Channel B
+    // channel_config_set_chain_to(&cfg_a, I2S_DMA_CHANNEL_B);
+
+    dma_channel_configure(
+        I2S_DMA_CHANNEL_A,
+        &cfg_a,
+        &inst->pio->txf[inst->sm], // Write address (PIO TX FIFO)
+        audio_buffer,                      // Read address (start of buffer)
+        AUDIO_BUFFER_SIZE,              // Transfer the first half
+        false                              // Don't start yet
+    );
+
+    // --- Configure Channel B (for the second half of the buffer) ---
+    dma_channel_config cfg_b = dma_channel_get_default_config(I2S_DMA_CHANNEL_B);
+    channel_config_set_transfer_data_size(&cfg_b, DMA_SIZE_32);
+    channel_config_set_read_increment(&cfg_b, true);
+    channel_config_set_write_increment(&cfg_b, false);
+    channel_config_set_dreq(&cfg_b, pio_get_dreq(inst->pio, inst->sm, true));
+    // When Channel B finishes, it will trigger Channel A to start over
+    // channel_config_set_chain_to(&cfg_b, I2S_DMA_CHANNEL_A);
+
+    dma_channel_configure(
+        I2S_DMA_CHANNEL_B,
+        &cfg_b,
+        &inst->pio->txf[inst->sm], // Write address (PIO TX FIFO)
+        &audio_buffer[AUDIO_BUFFER_SIZE], // Read address (second half)
+        AUDIO_BUFFER_SIZE,                // Transfer the second half
+        false                                 // Don't start yet
+    );
+
+    // --- Configure Interrupts ---
+    // We want an interrupt when each channel completes.
+    // Both channels will trigger the same IRQ line (DMA_IRQ_0).
+    dma_channel_set_irq0_enabled(I2S_DMA_CHANNEL_A, true);
+    dma_channel_set_irq1_enabled(I2S_DMA_CHANNEL_B, true);
+
+    // Set our ISR as the exclusive handler for DMA_IRQ_0
+    irq_set_exclusive_handler(DMA_IRQ_0, &dma_isr_0);
+    irq_set_enabled(DMA_IRQ_0, true);
+
+    dma_channel_set_irq1_enabled(I2S_DMA_CHANNEL_B, true);
+    irq_set_exclusive_handler(DMA_IRQ_1, &dma_isr_1);
+    irq_set_enabled(DMA_IRQ_1, true);
+
+    // --- Start the DMA loop ---
+    // Manually trigger the first channel to start the chain reaction.
+    // dma_channel_start(I2S_DMA_CHANNEL_A);
+    dma_channel_start(I2S_DMA_CHANNEL_B);
+
+
+}*/
+
 void init_dma_for_I2S(I2S* inst, volatile uint32_t* audio_buffer){
+    dma_chan = dma_claim_unused_channel(true);
+    dma_chan2 = dma_claim_unused_channel(true);
+    dma_channel_config c = dma_channel_get_default_config(dma_chan);
+    dma_channel_config c2 = dma_channel_get_default_config(dma_chan2);
+    channel_config_set_transfer_data_size(&c, DMA_SIZE_32);
+    channel_config_set_transfer_data_size(&c2, DMA_SIZE_32);
+    // We need to move SRC address but not DST
+    channel_config_set_write_increment(&c, false);
+    channel_config_set_read_increment(&c, true);
+    channel_config_set_write_increment(&c2, false);
+    channel_config_set_read_increment(&c2, true);
+    
+    // Repeat buffer again
+    channel_config_set_ring(&c, false, 8); // (1 << 4) byte boundary on read ptr
+    channel_config_set_ring(&c2, false, 8); // (1 << 4) byte boundary on read ptr
+    // Chaining DMA channels to each other
+    channel_config_set_chain_to(&c, dma_chan2);
+    channel_config_set_chain_to(&c2, dma_chan);
 
-    // dma_channel_config c = dma_channel_get_default_config(I2S_DMA_CHANNEL);
-    dma_interrupt_fired = false;
-    pio_hw_t* pio_hw;
-    dreq_num_t dreq_num; 
-    if(inst->pio == pio0){
-        pio_hw = pio0_hw; 
-        dreq_num = DREQ_PIO0_TX0 + inst->sm;
-    }else if(inst->pio == pio1){
-        pio_hw = pio1_hw;
-        dreq_num = DREQ_PIO1_TX0 + inst->sm;
-    }else if(inst->pio == pio2){
-        pio_hw = pio2_hw;
-        dreq_num = DREQ_PIO2_TX0 + inst->sm;
-    }else{
-        //something went wrong (there are only 3 pio instances)
-        return;
-    }
+    // Set DMA timer 0 as DMA trigger
+    channel_config_set_dreq(&c, pio_get_dreq(inst->pio, inst->sm, true));
+    // Set DMA timer 0 as DMA trigger
+    channel_config_set_dreq(&c2, pio_get_dreq(inst->pio, inst->sm, true));
+    // dma_hw->timer[0] = (1 << 16)  |  4;   // run at 1/4 system clock
 
-    dma_hw->ch[I2S_DMA_CHANNEL].read_addr = (io_rw_32)(audio_buffer);
-    dma_hw->ch[I2S_DMA_CHANNEL + 1].read_addr = (io_rw_32)(audio_buffer + AUDIO_BUFFER_SIZE); // go to next half
+    dma_channel_configure
+	(
+        dma_chan,
+        &c,
+        &inst->pio->txf[inst->sm],      // Destination is PIO FIFO
+        audio_buffer,                 // Source is a memory array
+        AUDIO_BUFFER_SIZE,                     // Length of the transaction
+        false                    // Don't start yet
+    );
 
-    //dma (only one bus transfer)
-    dma_hw->ch[I2S_DMA_CHANNEL].transfer_count = (0u << 28) + 1u;
-    dma_hw->ch[I2S_DMA_CHANNEL + 1].transfer_count = (0u << 28) + 1u;
+    dma_channel_configure
+	(
+        dma_chan2,
+        &c2,
+        &inst->pio->txf[inst->sm],      // Destination is PIO FIFO
+        &audio_buffer[AUDIO_BUFFER_SIZE],                 // Source is a memory array
+        AUDIO_BUFFER_SIZE,                     // Length of the transaction
+        false                   // Don't start yet
+    );
 
-    uint32_t* write_addr = &pio_hw->txf[inst->sm];
-    dma_hw->ch[I2S_DMA_CHANNEL].write_addr = (io_rw_32)(write_addr);
-    dma_hw->ch[I2S_DMA_CHANNEL + 1].write_addr = (io_rw_32)(write_addr);
+    dma_channel_set_irq0_enabled(dma_chan, true);
+    dma_channel_set_irq1_enabled(dma_chan2, true);
 
-    dma_hw->ch[I2S_DMA_CHANNEL].ctrl_trig = 0;
-    dma_hw->ch[I2S_DMA_CHANNEL + 1].ctrl_trig = 0;
-    uint32_t temp = 0;
-    temp |= 2u << 2; //set packet size to (one word)
-    temp |= dreq_num << 17; //set data request to PIO TX0
-    temp |= 1 << 4; //increment read address after every transfer
-    temp |= (uint)(log2f(SAMPLE_RATE)) << 8; //set the ring buffer size to 256 bytes (2**8)
-    temp |= 1u << 0; // enable dma
-    dma_hw->ch[I2S_DMA_CHANNEL + 1].ctrl_trig = temp;
-    dma_hw->ch[I2S_DMA_CHANNEL].ctrl_trig = temp | (1 << 13); //chain_to channel I2S_DMA_CHANNEL + 1
+    // Set our ISR as the exclusive handler for DMA_IRQ_0
+    irq_set_exclusive_handler(DMA_IRQ_0, &dma_isr_0);
+    irq_set_enabled(DMA_IRQ_0, true);
 
-    dma_irqn_set_channel_enabled(DMA_IRQ_0, I2S_DMA_CHANNEL, 1);
-    dma_irqn_set_channel_enabled(DMA_IRQ_0, I2S_DMA_CHANNEL + 1, 1);
+    irq_set_exclusive_handler(DMA_IRQ_1, &dma_isr_1);
+    irq_set_enabled(DMA_IRQ_1, true);
 
-    irq_set_exclusive_handler(DMA_IRQ_0, &dma_isr);
-    irq_set_enabled(DMA_IRQ_0, 1);
-
-    dma_channel_start(I2S_DMA_CHANNEL);
-
-
-}
-void dma_isr(){
-    dma_interrupt_fired = true;
-    if(dma_irqn_get_channel_status(DMA_IRQ_0, I2S_DMA_CHANNEL)){
-        dma_irqn_acknowledge_channel(DMA_IRQ_0, I2S_DMA_CHANNEL);
-
-        //load in next audio data 0 - 255
-    }else{
-        dma_irqn_acknowledge_channel(DMA_IRQ_0, I2S_DMA_CHANNEL + 1);
-        
-        //load in next audio data 256 - 511
-    }
+    // Let's start the 1st DMA channel
+    dma_start_channel_mask(1u << dma_chan);
 }
 
+void dma_isr_0(){
+
+    dma_irqn_acknowledge_channel(DMA_IRQ_0, dma_chan);
+    //signal to the cpu to calculate the next audio data 0 - 255
+    buffer_a_flag = true;
+    gpio_put(14, toggle_a);
+    toggle_a = !toggle_a;
+    dma_channel_set_irq0_enabled(dma_chan, false);
+    dma_channel_set_irq1_enabled(dma_chan, true);
+    // dma_channel_start(dma_chan2);
+}
+
+void dma_isr_1(){
+
+    dma_irqn_acknowledge_channel(DMA_IRQ_1, dma_chan2);
+    //signal to the cpu to calculate the next audio data 256 - 511 
+    buffer_b_flag = true;
+    gpio_put(18, toggle_b);
+    toggle_b = !toggle_b;
+    dma_channel_set_irq1_enabled(dma_chan2, false);
+    dma_channel_set_irq0_enabled(dma_chan, true);
+    // hw_clear_bits(&dma_hw->ch[dma_chan2].ctrl_trig, 1 << 0);
+    // dma_channel_start(I2S_DMA_CHANNEL_A);
+}
+double get_dma_interrupt_interval(int sample_rate, int pio_tx_fifo_length, int dma_transfer_bytes){
+    return (double)(dma_transfer_bytes) / ((double)(pio_tx_fifo_length) * (double)(sample_rate));
+}
+
+double waveform_calc(double x){
+    return sin(2 * M_PI * FUNC_FREQ * x);
+}
+/*
 void write_audio_buffer(I2S* inst, volatile uint32_t* audio_buffer, uint audio_buffer_len){
     for(int i = 0; i < audio_buffer_len; i++){
         pio_sm_put_blocking(inst->pio, inst->sm, audio_buffer[i]);
     }
 }
+    */
 
