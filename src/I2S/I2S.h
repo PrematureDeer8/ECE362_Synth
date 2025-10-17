@@ -16,10 +16,10 @@
 #define SAMPLE_RATE 44100 //standard sample rate in Hz for HIGH res sound
 #define CHANNELS 2 // 2 channels for left/right
 #define AUDIO_BITS 16 //length of DAC resoultion
-#define AUDIO_BUFFER_SIZE 256 // length OSR FIFO when RX join with TX (SHOULD BE POWER OF 2)
+#define AUDIO_BUFFER_SIZE 512 // length OSR FIFO when RX join with TX (SHOULD BE POWER OF 2)
 #define I2S_DMA_CHANNEL_A 0 //this is the DMA channel for I2S (DO NOT USE IT FOR ANOTHER SUBMODULE)
 #define I2S_DMA_CHANNEL_B 1
-#define FUNC_FREQ 20000
+#define FUNC_FREQ 440
 
 int dma_chan, dma_chan2;
 
@@ -31,8 +31,9 @@ typedef struct _I2S {
 } I2S;
 
 volatile bool buffer_a_flag, buffer_b_flag;
-volatile uint32_t* audio_buffer; // volatile is so that the compiler doesn't "optimize out"
-
+volatile uint32_t audio_buffer[AUDIO_BUFFER_SIZE * 2] __attribute__((aligned(AUDIO_BUFFER_SIZE * 2 * sizeof(uint32_t)))); // volatile is so that the compiler doesn't "optimize out"
+// volatile uint32_t* audio_buffer;
+I2S inst;
 
 double waveform_calc(double x);
 
