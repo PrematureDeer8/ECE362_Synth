@@ -129,9 +129,18 @@ void dma_isr_0(){
 double get_dma_interrupt_interval(int sample_rate, int pio_tx_fifo_length, int dma_transfer_bytes){
     return (double)(dma_transfer_bytes) / ((double)(pio_tx_fifo_length) * (double)(sample_rate));
 }
-
-double waveform_calc(double x){
+//sine wave
+/*double waveform_calc(double x){
     return sin(2 * M_PI * FUNC_FREQ * x);
+}*/
+//square wave
+double waveform_calc(double x){
+    double k_prime = (int)(x * (FUNC_FREQ)); //take the floor of this value
+    if((x > (k_prime / FUNC_FREQ)) && (x < ((k_prime + 0.5) / FUNC_FREQ))){
+        return 1;
+    }else{
+        return -1;
+    }
 }
 /*
 void write_audio_buffer(I2S* inst, volatile uint32_t* audio_buffer, uint audio_buffer_len){
