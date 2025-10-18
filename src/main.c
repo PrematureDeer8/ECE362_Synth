@@ -10,6 +10,7 @@ int main() {
     stdio_init_all();
     //make a I2S instance for ease of use
     I2S* inst = malloc(sizeof(*inst));
+    total_sample_count = 0;
     inst->BCLK = 5;
     inst->TX_PIN = 7;
     inst->pio = pio0;
@@ -19,12 +20,12 @@ int main() {
     buffer_b_flag = false;
 
     // double func_step_size = get_dma_interrupt_interval(SAMPLE_RATE, 4, AUDIO_BUFFER_SIZE);
-    uint64_t total_samples_generated = 0;
     //lets put in an alternating pattern for each channel
     for(int i = 0; i < AUDIO_BUFFER_SIZE * 2; i++){
         double audio_val = waveform_calc((double)(i) / SAMPLE_RATE); 
         int16_t sample = audio_val * INT16_MAX;
         audio_buffer[i] = ((uint32_t)(sample) << 16) | ((uint16_t)(sample));
+        total_sample_count++;
     }
     gpio_set_dir(18, 1);
     gpio_set_function(18, GPIO_FUNC_SIO);
@@ -34,7 +35,7 @@ int main() {
     gpio_put(14, 0);
     sleep_ms(3000);
     uint32_t start_address = (uint32_t)(&audio_buffer[0]);
-    uint32_t end_address = (uint32_t)(&audio_buffer[AUDIO_BUFFER_SIZE - 1]);
+    uint32_t end_address = (uint32_t)(&audio_buffer[(2 * AUDIO_BUFFER_SIZE)- 1]);
     printf("Read start address: %p\n", (void *)(audio_buffer));
     printf("Read end address: %p\n", (void *)(&audio_buffer[AUDIO_BUFFER_SIZE - 1]));
     init_dma_for_I2S(inst, audio_buffer);
@@ -92,6 +93,5 @@ int main() {
         // }
     }
     free(inst);
-    free((void*)(audio_buffer));
 }
 

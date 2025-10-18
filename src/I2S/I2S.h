@@ -32,7 +32,7 @@ typedef struct _I2S {
 
 volatile bool buffer_a_flag, buffer_b_flag;
 volatile uint32_t audio_buffer[AUDIO_BUFFER_SIZE * 2] __attribute__((aligned(AUDIO_BUFFER_SIZE * 2 * sizeof(uint32_t)))); // volatile is so that the compiler doesn't "optimize out"
-// volatile uint32_t* audio_buffer;
+uint64_t total_sample_count;
 I2S inst;
 
 double waveform_calc(double x);

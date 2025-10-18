@@ -1,7 +1,7 @@
 #include "I2S.h"
 
 volatile bool toggle_a = 0;
-volatile bool toggle_b = 0;
+volatile bool toggle_first_half = 1;
 int increment = 0;
 
 float get_clock_div_ratio(float sample_rate, float channels, float audio_bits, int instruction_count){
@@ -58,74 +58,15 @@ void I2S_init(I2S* inst){
 
 }
 
-/*void init_dma_for_I2S(I2S* inst, volatile uint32_t* audio_buffer){
-
-    dma_channel_config cfg_a = dma_channel_get_default_config(I2S_DMA_CHANNEL_A);
-    channel_config_set_transfer_data_size(&cfg_a, DMA_SIZE_32);
-    channel_config_set_read_increment(&cfg_a, true);
-    channel_config_set_write_increment(&cfg_a, false);
-    channel_config_set_dreq(&cfg_a, pio_get_dreq(inst->pio, inst->sm, true));
-    // When Channel A finishes, it will trigger Channel B
-    // channel_config_set_chain_to(&cfg_a, I2S_DMA_CHANNEL_B);
-
-    dma_channel_configure(
-        I2S_DMA_CHANNEL_A,
-        &cfg_a,
-        &inst->pio->txf[inst->sm], // Write address (PIO TX FIFO)
-        audio_buffer,                      // Read address (start of buffer)
-        AUDIO_BUFFER_SIZE,              // Transfer the first half
-        false                              // Don't start yet
-    );
-
-    // --- Configure Channel B (for the second half of the buffer) ---
-    dma_channel_config cfg_b = dma_channel_get_default_config(I2S_DMA_CHANNEL_B);
-    channel_config_set_transfer_data_size(&cfg_b, DMA_SIZE_32);
-    channel_config_set_read_increment(&cfg_b, true);
-    channel_config_set_write_increment(&cfg_b, false);
-    channel_config_set_dreq(&cfg_b, pio_get_dreq(inst->pio, inst->sm, true));
-    // When Channel B finishes, it will trigger Channel A to start over
-    // channel_config_set_chain_to(&cfg_b, I2S_DMA_CHANNEL_A);
-
-    dma_channel_configure(
-        I2S_DMA_CHANNEL_B,
-        &cfg_b,
-        &inst->pio->txf[inst->sm], // Write address (PIO TX FIFO)
-        &audio_buffer[AUDIO_BUFFER_SIZE], // Read address (second half)
-        AUDIO_BUFFER_SIZE,                // Transfer the second half
-        false                                 // Don't start yet
-    );
-
-    // --- Configure Interrupts ---
-    // We want an interrupt when each channel completes.
-    // Both channels will trigger the same IRQ line (DMA_IRQ_0).
-    dma_channel_set_irq0_enabled(I2S_DMA_CHANNEL_A, true);
-    dma_channel_set_irq1_enabled(I2S_DMA_CHANNEL_B, true);
-
-    // Set our ISR as the exclusive handler for DMA_IRQ_0
-    irq_set_exclusive_handler(DMA_IRQ_0, &dma_isr_0);
-    irq_set_enabled(DMA_IRQ_0, true);
-
-    dma_channel_set_irq1_enabled(I2S_DMA_CHANNEL_B, true);
-    irq_set_exclusive_handler(DMA_IRQ_1, &dma_isr_1);
-    irq_set_enabled(DMA_IRQ_1, true);
-
-    // --- Start the DMA loop ---
-    // Manually trigger the first channel to start the chain reaction.
-    // dma_channel_start(I2S_DMA_CHANNEL_A);
-    dma_channel_start(I2S_DMA_CHANNEL_B);
-
-
-}*/
-
 void init_dma_for_I2S(I2S* inst, volatile uint32_t* audio_buffer){
-    // dma_chan = dma_claim_unused_channel(true);
-    dma_chan = 0;
+    dma_chan = dma_claim_unused_channel(true);
+    // dma_chan = 0;
     dma_channel_config c = dma_channel_get_default_config(dma_chan);
     channel_config_set_transfer_data_size(&c, DMA_SIZE_32);
     // We need to move SRC address but not DST
     channel_config_set_write_increment(&c, false);
     channel_config_set_read_increment(&c, true);
-    uint bytes_size = (uint)(log2f(AUDIO_BUFFER_SIZE * sizeof(*audio_buffer)));
+    uint bytes_size = (uint)(log2f(AUDIO_BUFFER_SIZE * sizeof(*audio_buffer) * 2));
     channel_config_set_ring(&c, false, bytes_size);
     
     // Set DMA timer 0 as DMA trigger
@@ -145,23 +86,43 @@ void init_dma_for_I2S(I2S* inst, volatile uint32_t* audio_buffer){
     dma_irqn_set_channel_enabled(0, dma_chan, 1);
 
     // Set our ISR as the exclusive handler for DMA_IRQ_0
+    irq_set_priority(DMA_IRQ_0, 0);//highest priority(we can't wait around)
     irq_set_exclusive_handler(DMA_IRQ_0, &dma_isr_0);
     irq_set_enabled(DMA_IRQ_0, true);
     
 
 }
-
+//as of now this is to slow
 void dma_isr_0(){
 
     //signal to the cpu to calculate the next audio data 0 - 255
     // dma_irqn_acknowledge_channel(DMA_IRQ_0, dma_chan);
-    dma_hw->intr = 1u << dma_chan;
-    buffer_a_flag = true;
+    
+    
+    //this line below will acknowledge the interrupt!
+    dma_hw->intr = 1u << dma_chan; // this is the line we have been searching for
+    
     gpio_put(14, toggle_a);
     toggle_a = !toggle_a;
-    uint32_t* next_trans_count = (DMA_BASE + 0x804);
-    printf("Trans count reload value: %lu!\n", (unsigned long)(*next_trans_count));
-    // dma_irqn_set_channel_enabled(0, dma_chan, 1);
+    // calculate next samples for first half of audio buffer
+    if(toggle_first_half){
+        for(int i = 0; i < AUDIO_BUFFER_SIZE; i++){
+            double audio_val = waveform_calc((double)(total_sample_count) / SAMPLE_RATE); 
+            int16_t sample = audio_val * INT16_MAX;
+            audio_buffer[i] = ((uint32_t)(sample) << 16) | ((uint16_t)(sample));
+            total_sample_count++;
+        }
+        toggle_first_half = 0;
+    //calculate next samples for second half of audio buffer
+    }else{
+        for(int i = AUDIO_BUFFER_SIZE; i < (AUDIO_BUFFER_SIZE * 2); i++){
+            double audio_val = waveform_calc((double)(total_sample_count) / SAMPLE_RATE); 
+            int16_t sample = audio_val * INT16_MAX;
+            audio_buffer[i] = ((uint32_t)(sample) << 16) | ((uint16_t)(sample));
+            total_sample_count++;
+        }
+        toggle_first_half = 1;
+    }
 
 }
 
