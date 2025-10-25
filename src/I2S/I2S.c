@@ -138,9 +138,10 @@ double get_dma_interrupt_interval(int sample_rate, int pio_tx_fifo_length, int d
     return (double)(dma_transfer_bytes) / ((double)(pio_tx_fifo_length) * (double)(sample_rate));
 }
 //sine wave
+/*
 float waveform_calc(float x){
     return sinf(x);
-}
+}*/
 //square wave
 /*float waveform_calc(float x){
     float k_prime = (int)(x / (2 * M_PI)); //take the floor of this value
@@ -149,7 +150,14 @@ float waveform_calc(float x){
     }else{
         return -1;
     }
+}*/
+//saw wave
+float waveform_calc(float x){
+    float k_prime = (x / M_PI);
+    int f_k_prime = (2 * k_prime + 2) / 4.0f;
+    return (x/M_PI - (f_k_prime * 2));
 }
+
 /*
 void write_audio_buffer(I2S* inst, volatile uint32_t* audio_buffer, uint audio_buffer_len){
     for(int i = 0; i < audio_buffer_len; i++){
