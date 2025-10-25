@@ -10,6 +10,7 @@
 #include "I2S/i2s_clocks.pio.h"
 #include "hardware/pio.h"
 #include "hardware/dma.h"
+#include "pico/stdlib.h"
 #include <math.h>
 #include <stdio.h>
 
@@ -33,9 +34,11 @@ typedef struct _I2S {
 volatile bool buffer_a_flag, buffer_b_flag;
 volatile uint32_t audio_buffer[AUDIO_BUFFER_SIZE * 2] __attribute__((aligned(AUDIO_BUFFER_SIZE * 2 * sizeof(uint32_t)))); // volatile is so that the compiler doesn't "optimize out"
 uint64_t total_sample_count;
+float phase_increment;
+float phase;
 I2S inst;
 
-double waveform_calc(double x);
+float waveform_calc(float x);
 
 // function that will get the clock divider ratio need for a specific sample rate
 float get_clock_div_ratio(float sample_rate, float channels, float audio_bits, int instruction_count);

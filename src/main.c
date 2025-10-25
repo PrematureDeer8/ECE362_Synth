@@ -11,6 +11,8 @@ int main() {
     //make a I2S instance for ease of use
     I2S* inst = malloc(sizeof(*inst));
     total_sample_count = 0;
+    phase_increment = 2 * M_PI * (float)(FUNC_FREQ) / SAMPLE_RATE;
+    phase = 0;
     inst->BCLK = 5;
     inst->TX_PIN = 7;
     inst->pio = pio0;
@@ -22,10 +24,13 @@ int main() {
     // double func_step_size = get_dma_interrupt_interval(SAMPLE_RATE, 4, AUDIO_BUFFER_SIZE);
     //lets put in an alternating pattern for each channel
     for(int i = 0; i < AUDIO_BUFFER_SIZE * 2; i++){
-        double audio_val = waveform_calc((double)(i) / SAMPLE_RATE); 
+        double audio_val = waveform_calc(phase_increment); 
         int16_t sample = audio_val * INT16_MAX;
         audio_buffer[i] = ((uint32_t)(sample) << 16) | ((uint16_t)(sample));
-        total_sample_count++;
+        if(phase >= (2 * M_PI)){
+            phase -= 2 * M_PI;
+        }
+        phase += phase_increment;
     }
     gpio_set_dir(18, 1);
     gpio_set_function(18, GPIO_FUNC_SIO);
@@ -69,28 +74,6 @@ int main() {
             // printf("Incorrect read address encountered: %lu\n", (unsigned long)(read_addr));
             printf("%lu, ", (unsigned long)(read_addr));
         }
-
-        // if(buffer_a_flag){
-        //     // gpio_put(15, 1);
-        //     buffer_a_flag = false;
-        //     for(int i = 0; i < AUDIO_BUFFER_SIZE; i++){
-        //         // double audio_val = waveform_calc((double)(total_samples_generated) / SAMPLE_RATE); 
-        //         // int16_t sample = audio_val * INT16_MAX;
-        //         // audio_buffer[i] = (((uint32_t)(sample)) << 16) | ((uint16_t)(sample));
-        //         audio_buffer[i] = (0xFF00ul << 16) | (0xFF00u << 0);
-        //         total_samples_generated++;
-        //     }
-        // }
-        // if(buffer_b_flag){
-        //     buffer_b_flag = false;
-        //     for(int i = AUDIO_BUFFER_SIZE; i < (AUDIO_BUFFER_SIZE * 2); i++){
-        //         // double audio_val = waveform_calc((double)(total_samples_generated) / SAMPLE_RATE);
-        //         // int16_t sample = audio_val * INT16_MAX; 
-        //         // audio_buffer[i] = (((uint32_t)(sample)) << 16) | ((uint16_t)(sample));
-        //         audio_buffer[i] = (0xFF00ul << 16) | (0xFF00u << 0);
-        //         total_samples_generated++;
-        //     }
-        // }
     }
     free(inst);
 }

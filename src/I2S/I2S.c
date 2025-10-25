@@ -102,27 +102,35 @@ void dma_isr_0(){
     //this line below will acknowledge the interrupt!
     dma_hw->intr = 1u << dma_chan; // this is the line we have been searching for
     
-    gpio_put(14, toggle_a);
-    toggle_a = !toggle_a;
+    gpio_put(14, 1);
     // calculate next samples for first half of audio buffer
     if(toggle_first_half){
         for(int i = 0; i < AUDIO_BUFFER_SIZE; i++){
-            double audio_val = waveform_calc((double)(total_sample_count) / SAMPLE_RATE); 
+            float audio_val = waveform_calc(phase); 
             int16_t sample = audio_val * INT16_MAX;
             audio_buffer[i] = ((uint32_t)(sample) << 16) | ((uint16_t)(sample));
-            total_sample_count++;
+            //make sure phase stays at a reasonable level
+            if(phase >= (2 * M_PI)){
+                phase -= 2 * M_PI;
+            }
+            phase += phase_increment;
         }
         toggle_first_half = 0;
     //calculate next samples for second half of audio buffer
     }else{
         for(int i = AUDIO_BUFFER_SIZE; i < (AUDIO_BUFFER_SIZE * 2); i++){
-            double audio_val = waveform_calc((double)(total_sample_count) / SAMPLE_RATE); 
+            float audio_val = waveform_calc(phase); 
             int16_t sample = audio_val * INT16_MAX;
             audio_buffer[i] = ((uint32_t)(sample) << 16) | ((uint16_t)(sample));
-            total_sample_count++;
+            //make sure phase stays at a reasonable level (does not increment forever)
+            if(phase >= (2 * M_PI)){
+                phase -= 2 * M_PI;
+            }
+            phase += phase_increment;
         }
         toggle_first_half = 1;
     }
+    gpio_put(14, 0);
 
 }
 
@@ -130,13 +138,13 @@ double get_dma_interrupt_interval(int sample_rate, int pio_tx_fifo_length, int d
     return (double)(dma_transfer_bytes) / ((double)(pio_tx_fifo_length) * (double)(sample_rate));
 }
 //sine wave
-/*double waveform_calc(double x){
-    return sin(2 * M_PI * FUNC_FREQ * x);
-}*/
+float waveform_calc(float x){
+    return sinf(x);
+}
 //square wave
-double waveform_calc(double x){
-    double k_prime = (int)(x * (FUNC_FREQ)); //take the floor of this value
-    if((x > (k_prime / FUNC_FREQ)) && (x < ((k_prime + 0.5) / FUNC_FREQ))){
+/*float waveform_calc(float x){
+    float k_prime = (int)(x / (2 * M_PI)); //take the floor of this value
+    if((x > (k_prime) * 2 * M_PI) && (x < ((k_prime + 0.5) * 2 * M_PI))){
         return 1;
     }else{
         return -1;
