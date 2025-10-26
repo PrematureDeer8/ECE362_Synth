@@ -7,6 +7,44 @@ int increment = 0;
 float get_clock_div_ratio(float sample_rate, float channels, float audio_bits, int instruction_count){
     return SYS_CLK_HZ / (sample_rate * audio_bits * channels * instruction_count);
 }
+//initalize audio buffer, phase accumulator, pio statemachine
+I2S* init_wavegen(int BCLK, int TX_PIN, PIO chan, bool debug){
+    phase_increment = 2 * M_PI * (float)(FUNC_FREQ) / SAMPLE_RATE;
+    phase = 0;
+
+    inst = malloc(sizeof(*inst));
+    inst->BCLK = BCLK;
+    inst->TX_PIN = TX_PIN;
+    inst->pio = pio0;
+
+    I2S_init(inst);
+
+    total_sample_count = 0;
+
+    //fill in audio buffer
+    for(int i = 0; i < AUDIO_BUFFER_SIZE * 2; i++){
+        float audio_val = waveform_calc(&sin_wave, phase, total_sample_count, 0.5f, SAMPLE_RATE * 10); 
+        int16_t sample = audio_val * INT16_MAX;
+        audio_buffer[i] = ((uint32_t)(sample) << 16) | ((uint16_t)(sample));
+        if(phase >= (2 * M_PI)){
+            phase -= 2 * M_PI;
+        }
+        phase += phase_increment;
+        total_sample_count++;
+    }
+
+    init_dma_for_I2S(inst, audio_buffer);
+    //debug pins
+    gpio_set_dir(18, 1);
+    gpio_set_function(18, GPIO_FUNC_SIO);
+    gpio_put(18, 0);
+    gpio_set_dir(14, 1);
+    gpio_set_function(14, GPIO_FUNC_SIO);
+    gpio_put(14, 0);
+    //return instance to be freed
+    return inst;
+
+}
 
 void I2S_init(I2S* inst){
     // 1. Define your I2S pins
@@ -106,7 +144,7 @@ void dma_isr_0(){
     // calculate next samples for first half of audio buffer
     if(toggle_first_half){
         for(int i = 0; i < AUDIO_BUFFER_SIZE; i++){
-            float audio_val = waveform_calc(phase); 
+            float audio_val = waveform_calc(&sin_wave, phase, total_sample_count, 0.5f, SAMPLE_RATE * 10); 
             int16_t sample = audio_val * INT16_MAX;
             audio_buffer[i] = ((uint32_t)(sample) << 16) | ((uint16_t)(sample));
             //make sure phase stays at a reasonable level
@@ -114,12 +152,13 @@ void dma_isr_0(){
                 phase -= 2 * M_PI;
             }
             phase += phase_increment;
+            total_sample_count++;
         }
         toggle_first_half = 0;
     //calculate next samples for second half of audio buffer
     }else{
         for(int i = AUDIO_BUFFER_SIZE; i < (AUDIO_BUFFER_SIZE * 2); i++){
-            float audio_val = waveform_calc(phase); 
+            float audio_val = waveform_calc(&sin_wave, phase, total_sample_count, 0.5f, SAMPLE_RATE * 10);  
             int16_t sample = audio_val * INT16_MAX;
             audio_buffer[i] = ((uint32_t)(sample) << 16) | ((uint16_t)(sample));
             //make sure phase stays at a reasonable level (does not increment forever)
@@ -127,6 +166,7 @@ void dma_isr_0(){
                 phase -= 2 * M_PI;
             }
             phase += phase_increment;
+            total_sample_count++;
         }
         toggle_first_half = 1;
     }
@@ -138,8 +178,8 @@ double get_dma_interrupt_interval(int sample_rate, int pio_tx_fifo_length, int d
     return (double)(dma_transfer_bytes) / ((double)(pio_tx_fifo_length) * (double)(sample_rate));
 }
 //sine wave
-/*
-float waveform_calc(float x){
+
+/*float waveform_calc(float x){
     return sinf(x);
 }*/
 //square wave
@@ -152,11 +192,11 @@ float waveform_calc(float x){
     }
 }*/
 //saw wave
-float waveform_calc(float x){
+/*float waveform_calc(float x){
     float k_prime = (x / M_PI);
     int f_k_prime = (2 * k_prime + 2) / 4.0f;
     return (x/M_PI - (f_k_prime * 2));
-}
+}*/
 
 /*
 void write_audio_buffer(I2S* inst, volatile uint32_t* audio_buffer, uint audio_buffer_len){

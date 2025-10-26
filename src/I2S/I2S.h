@@ -13,13 +13,12 @@
 #include "pico/stdlib.h"
 #include <math.h>
 #include <stdio.h>
+#include "wavegen/wavegen.h"
 
 #define SAMPLE_RATE 44100 //standard sample rate in Hz for HIGH res sound
 #define CHANNELS 2 // 2 channels for left/right
 #define AUDIO_BITS 16 //length of DAC resoultion
-#define AUDIO_BUFFER_SIZE 512 // length OSR FIFO when RX join with TX (SHOULD BE POWER OF 2)
-#define I2S_DMA_CHANNEL_A 0 //this is the DMA channel for I2S (DO NOT USE IT FOR ANOTHER SUBMODULE)
-#define I2S_DMA_CHANNEL_B 1
+#define AUDIO_BUFFER_SIZE 512 
 #define FUNC_FREQ 440
 
 int dma_chan, dma_chan2;
@@ -31,14 +30,15 @@ typedef struct _I2S {
     uint TX_PIN;
 } I2S;
 
-volatile bool buffer_a_flag, buffer_b_flag;
+I2S* inst;
+
 volatile uint32_t audio_buffer[AUDIO_BUFFER_SIZE * 2] __attribute__((aligned(AUDIO_BUFFER_SIZE * 2 * sizeof(uint32_t)))); // volatile is so that the compiler doesn't "optimize out"
-uint64_t total_sample_count;
+uint32_t total_sample_count;
 float phase_increment;
 float phase;
-I2S inst;
 
-float waveform_calc(float x);
+
+I2S* init_wavegen(int BCLK, int TX_PIN, PIO chan, bool debug);
 
 // function that will get the clock divider ratio need for a specific sample rate
 float get_clock_div_ratio(float sample_rate, float channels, float audio_bits, int instruction_count);
