@@ -19,7 +19,7 @@
 #define CHANNELS 2 // 2 channels for left/right
 #define AUDIO_BITS 16 //length of DAC resoultion
 #define AUDIO_BUFFER_SIZE 512 
-#define FUNC_FREQ 440
+#define FUNC_FREQ 50
 
 int dma_chan, dma_chan2;
 

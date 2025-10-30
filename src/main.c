@@ -10,6 +10,7 @@ int main() {
     stdio_init_all();
     //make a I2S instance for ease of use
     init_wavegen(5, 7, pio0, true);
+    init_wavetables();
     uint32_t start_address = (uint32_t)(&audio_buffer[0]);
     uint32_t end_address = (uint32_t)(&audio_buffer[(2 * AUDIO_BUFFER_SIZE)- 1]);
     absolute_time_t start_time, end_time;
@@ -27,7 +28,7 @@ int main() {
             start_time = get_absolute_time();
             uint32_t s1 = to_ms_since_boot(start_time);
             uint32_t s2 = to_ms_since_boot(end_time);
-            printf("Transfer time: %lu\n", (s1 - s2));
+            // printf("Transfer time: %lu\n", (s1 - s2));
             end_time = start_time;
             // printf("current read address: %p\n", (void*)(read_addr));
             // printf("last Read address: %p\n", (void*)(last_read_addr));

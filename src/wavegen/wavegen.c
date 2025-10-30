@@ -1,9 +1,23 @@
 #include "wavegen.h"
 
+static float delta_theta = 2.0f * M_PI / WAVETABLE_SIZE;
+
 //wavegen
-//this some nasty C lol
-float waveform_calc(float (*wavegen_func)(float), float phase, uint32_t samples, float alpha, float beta){
-    return attack_env(samples, alpha, beta) * (*wavegen_func)(phase);
+float waveform_calc(float* wavetable, float phase, uint32_t samples, float alpha, float beta){
+    //turn phase into a discrete sample point
+    uint i = (uint)(phase / delta_theta);
+    return wavetable[i];
+    // return attack_env(samples, alpha, beta) * (*wavegen_func)(phase);
+}
+
+void init_wavetables(){
+    float theta;
+    for(int i = 0; i < WAVETABLE_SIZE; i++){
+        theta = (float)(i) * 2.0f * M_PI / (WAVETABLE_SIZE);
+        sine_wavetable[i] = sinf(theta);
+        square_wavetable[i] = square_wave(theta);
+        saw_wavetable[i] = saw_wave(theta);
+    }
 }
 
 //sine wave

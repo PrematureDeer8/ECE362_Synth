@@ -23,7 +23,7 @@ I2S* init_wavegen(int BCLK, int TX_PIN, PIO chan, bool debug){
 
     //fill in audio buffer
     for(int i = 0; i < AUDIO_BUFFER_SIZE * 2; i++){
-        float audio_val = waveform_calc(&sin_wave, phase, total_sample_count, 0.5f, SAMPLE_RATE * 10); 
+        float audio_val = waveform_calc(saw_wavetable, phase, total_sample_count, 0.5f, SAMPLE_RATE * 10); 
         int16_t sample = audio_val * INT16_MAX;
         audio_buffer[i] = ((uint32_t)(sample) << 16) | ((uint16_t)(sample));
         if(phase >= (2 * M_PI)){
@@ -144,7 +144,7 @@ void dma_isr_0(){
     // calculate next samples for first half of audio buffer
     if(toggle_first_half){
         for(int i = 0; i < AUDIO_BUFFER_SIZE; i++){
-            float audio_val = waveform_calc(&sin_wave, phase, total_sample_count, 0.5f, SAMPLE_RATE * 10); 
+            float audio_val = waveform_calc(saw_wavetable, phase, total_sample_count, 0.5f, SAMPLE_RATE * 10); 
             int16_t sample = audio_val * INT16_MAX;
             audio_buffer[i] = ((uint32_t)(sample) << 16) | ((uint16_t)(sample));
             //make sure phase stays at a reasonable level
@@ -158,7 +158,7 @@ void dma_isr_0(){
     //calculate next samples for second half of audio buffer
     }else{
         for(int i = AUDIO_BUFFER_SIZE; i < (AUDIO_BUFFER_SIZE * 2); i++){
-            float audio_val = waveform_calc(&sin_wave, phase, total_sample_count, 0.5f, SAMPLE_RATE * 10);  
+            float audio_val = waveform_calc(saw_wavetable, phase, total_sample_count, 0.5f, SAMPLE_RATE * 10);  
             int16_t sample = audio_val * INT16_MAX;
             audio_buffer[i] = ((uint32_t)(sample) << 16) | ((uint16_t)(sample));
             //make sure phase stays at a reasonable level (does not increment forever)
