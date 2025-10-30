@@ -39,7 +39,7 @@ int16_t bitcrush(int16_t sample, int target_bits)
 {
     if(target_bits >= 16)
     {
-        return sample //nothing to do here
+        return sample; //nothing to do here
     }
     if(target_bits < 1)
     {
@@ -47,6 +47,7 @@ int16_t bitcrush(int16_t sample, int target_bits)
     }
     int32_t step = 1 << (16 - target_bits); //ensures we keep the top target_bits
    // lets say our target bits is 4, then step will shift to bit position 12, and only hold the top 4 bits
+    int32_t rounded;
     if(sample >= 0) //this gets the rounded number near the step value
     {
        rounded = sample + step/2;
