@@ -48,3 +48,38 @@ float attack_env(float x, float alpha, float beta){
     }
     return powf(x / beta, alpha);
 }
+
+int16_t bitcrush(int16_t sample, int target_bits)
+{
+    if(target_bits >= 16)
+    {
+        return sample; //nothing to do here
+    }
+    if(target_bits < 1)
+    {
+        return 0; //no samples
+    }
+    int32_t step = 1 << (16 - target_bits); //ensures we keep the top target_bits
+   // lets say our target bits is 4, then step will shift to bit position 12, and only hold the top 4 bits
+    int32_t rounded;
+    if(sample >= 0) //this gets the rounded number near the step value
+    {
+       rounded = sample + step/2;
+    }
+    else{
+       rounded = sample - step/2;
+    }
+    int32_t crushed = (rounded / step) * step; //when rounded is dvided by step it should truncate to a whole number.
+    //then when a whole number is multipled by step, it will ensure that the bit crushed value is in multiples of step
+
+    if(crushed > INT16_MAX)
+    {
+        crushed = INT16_MAX;
+    }
+    if(crushed < -INT16_MAX)
+    {
+        crushed = -INT16_MAX;
+    }
+
+    return (int16_t)crushed;
+}
