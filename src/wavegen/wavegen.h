@@ -12,6 +12,7 @@ float attack_env(float x, float alpha, float beta);
 float sin_wave(float x);
 float square_wave(float x);
 float saw_wave(float x);
+int16_t bitcrush(int16_t sample, int target_bits);
 
 
 #endif
