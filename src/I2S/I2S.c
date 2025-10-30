@@ -148,7 +148,7 @@ void dma_isr_0()
         {
             float audio_val = waveform_calc(&sin_wave, phase, total_sample_count, 0.5f, SAMPLE_RATE * 10);
             int16_t sample = audio_val * INT16_MAX;
-            sample = bitcrush(sample, 4) // 4 is just a placeholder rn
+            sample = bitcrush(sample, 16); // 4 is just a placeholder rn
             audio_buffer[i] = ((uint32_t)(sample) << 16) | ((uint16_t)(sample));
             // make sure phase stays at a reasonable level
             if (phase >= (2 * M_PI))
@@ -167,7 +167,7 @@ void dma_isr_0()
         {
             float audio_val = waveform_calc(&sin_wave, phase, total_sample_count, 0.5f, SAMPLE_RATE * 10);
             int16_t sample = audio_val * INT16_MAX; // 16 bit because there is a 16 bit dac (audio_val is between [-1.0-1.0])
-            sample = bitcrush(sample, 4)   // 4 is just a placeholder rn
+            sample = bitcrush(sample, 16);  // 4 is just a placeholder rn
             audio_buffer[i] = ((uint32_t)(sample) << 16) | ((uint16_t)(sample));
             // make sure phase stays at a reasonable level (does not increment forever)
             if (phase >= (2 * M_PI))
