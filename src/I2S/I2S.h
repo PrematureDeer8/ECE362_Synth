@@ -15,11 +15,11 @@
 #include <stdio.h>
 #include "wavegen/wavegen.h"
 
-#define SAMPLE_RATE 44100 //standard sample rate in Hz for HIGH res sound
+#define SAMPLE_RATE 44100 // had to lower it to give cpu more breathing room );
 #define CHANNELS 2 // 2 channels for left/right
 #define AUDIO_BITS 16 //length of DAC resoultion
 #define AUDIO_BUFFER_SIZE 512 
-#define FUNC_FREQ 50
+#define NUM_NOTES 5
 
 int dma_chan, dma_chan2;
 
@@ -34,8 +34,8 @@ I2S* inst;
 
 volatile uint32_t audio_buffer[AUDIO_BUFFER_SIZE * 2] __attribute__((aligned(AUDIO_BUFFER_SIZE * 2 * sizeof(uint32_t)))); // volatile is so that the compiler doesn't "optimize out"
 uint32_t total_sample_count;
-float phase_increment;
-float phase;
+float phase_increment[NUM_NOTES];
+float phase[NUM_NOTES];
 
 
 I2S* init_wavegen(int BCLK, int TX_PIN, PIO chan, bool debug);
@@ -47,6 +47,7 @@ void I2S_init(I2S* inst); // this function will set the statemachine in I2S inst
 void init_dma_for_I2S(I2S* inst, volatile uint32_t* audio_buffer);
 void dma_isr_1();
 void dma_isr_0();
+void fill_audio_buffer(int start, int length);
 //sample rate in HZ, the transfer FIFO length in bytes, number of bytes transferred by a dma channel
 double get_dma_interrupt_interval(int sample_rate, int pio_tx_fifo_length, int dma_transfer_bytes);
 

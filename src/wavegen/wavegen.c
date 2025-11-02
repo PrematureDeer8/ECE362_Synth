@@ -1,12 +1,17 @@
 #include "wavegen.h"
 
-static float delta_theta = 2.0f * M_PI / WAVETABLE_SIZE;
+static float delta_theta = 2.0f * M_PI / (float)(WAVETABLE_SIZE);
 
 //wavegen
-float waveform_calc(float* wavetable, float phase, uint32_t samples, float alpha, float beta){
+float waveform_calc(float* wavetable, float* phase, uint32_t samples, float alpha, float beta){
     //turn phase into a discrete sample point
-    uint i = (uint)(phase / delta_theta);
-    return wavetable[i];
+    float waveform = 0;
+    for(int i = 0; i < NUM_NOTES; i++){
+        uint index = ((uint)(phase[i] / delta_theta) % WAVETABLE_SIZE);
+        waveform += wavetable[index];
+        // waveform += sinf(phase[i]);
+    }
+    return 0.6f * waveform / (float)(NUM_NOTES);
     // return attack_env(samples, alpha, beta) * (*wavegen_func)(phase);
 }
 
@@ -48,6 +53,8 @@ float attack_env(float x, float alpha, float beta){
     }
     return powf(x / beta, alpha);
 }
+
+// FXs
 
 int16_t bitcrush(int16_t sample, int target_bits)
 {
