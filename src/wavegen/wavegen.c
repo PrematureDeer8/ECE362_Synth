@@ -1,5 +1,7 @@
 #include "wavegen.h"
 
+static float delta_theta = 2.0f * M_PI / (float)(WAVETABLE_SIZE);
+
 //wavegen
 //this some nasty C lol
 float waveform_calc(float (*wavegen_func)(float), float phase, uint32_t samples, float alpha, float beta){ //*wavegen_func is the address of the wave produced by the wave functions
@@ -69,4 +71,3 @@ int16_t bitcrush(int16_t sample, int target_bits)
 
     return (int16_t)crushed;
 }
-            sample = bitcrush(sample, 16); // 4 is just a placeholder rn
