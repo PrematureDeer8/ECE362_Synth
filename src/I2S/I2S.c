@@ -180,7 +180,7 @@ void fill_audio_buffer(int start, int length){
         {
             float audio_val = waveform_calc(sine_wavetable, phase, total_sample_count, 0.5f, SAMPLE_RATE * 10);
             int16_t sample = audio_val * INT16_MAX;
-            sample = bitcrush(sample, bitcrush_res); // 4 is just a placeholder rn
+            sample = bitcrush(sample, bitcrush_res); 
             audio_buffer[i] = ((uint32_t)(sample) << 16) | ((uint16_t)(sample));
             // make sure phase stays at a reasonable level (does not increment forever)
             for(int j = 0; j < NUM_NOTES; j++){
