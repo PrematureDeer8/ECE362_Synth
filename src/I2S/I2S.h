@@ -25,8 +25,8 @@ int dma_chan, dma_chan2;
 
 typedef struct _I2S {
     PIO pio;
-    uint sm;  //state machine
-    uint BCLK; //Bit clock
+    uint sm;
+    uint BCLK;
     uint TX_PIN;
 } I2S;
 

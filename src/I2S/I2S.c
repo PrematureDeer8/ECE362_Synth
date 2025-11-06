@@ -40,7 +40,7 @@ I2S *init_wavegen(int BCLK, int TX_PIN, PIO chan, bool debug)
     }
 
     inst = malloc(sizeof(*inst));
-    inst->BCLK = BCLK; // bit clock
+    inst->BCLK = BCLK;
     inst->TX_PIN = TX_PIN;
     inst->pio = pio0;
 

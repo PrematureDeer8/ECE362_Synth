@@ -3,9 +3,26 @@
 static float delta_theta = 2.0f * M_PI / (float)(WAVETABLE_SIZE);
 
 //wavegen
-//this some nasty C lol
-float waveform_calc(float (*wavegen_func)(float), float phase, uint32_t samples, float alpha, float beta){ //*wavegen_func is the address of the wave produced by the wave functions
-    return (*wavegen_func)(phase);
+float waveform_calc(float* wavetable, float* phase, uint32_t samples, float alpha, float beta){
+    //turn phase into a discrete sample point
+    float waveform = 0;
+    for(int i = 0; i < NUM_NOTES; i++){
+        uint index = ((uint)(phase[i] / delta_theta) % WAVETABLE_SIZE);
+        waveform += wavetable[index];
+        // waveform += sinf(phase[i]);
+    }
+    return 0.6f * waveform / (float)(NUM_NOTES);
+    // return attack_env(samples, alpha, beta) * (*wavegen_func)(phase);
+}
+
+void init_wavetables(){
+    float theta;
+    for(int i = 0; i < WAVETABLE_SIZE; i++){
+        theta = (float)(i) * 2.0f * M_PI / (WAVETABLE_SIZE);
+        sine_wavetable[i] = sinf(theta);
+        square_wavetable[i] = square_wave(theta);
+        saw_wavetable[i] = saw_wave(theta);
+    }
 }
 
 //sine wave
@@ -36,6 +53,8 @@ float attack_env(float x, float alpha, float beta){
     }
     return powf(x / beta, alpha);
 }
+
+// FXs
 
 int16_t bitcrush(int16_t sample, int target_bits)
 {
