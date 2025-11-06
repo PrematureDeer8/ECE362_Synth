@@ -1,4 +1,6 @@
 #include "I2S.h"
+#include "pico/multicore.h"
+
 
 volatile bool toggle_a = 0;
 volatile bool toggle_first_half = 1;
@@ -43,7 +45,8 @@ I2S *init_wavegen(int BCLK, int TX_PIN, PIO chan, bool debug)
     inst->BCLK = BCLK;
     inst->TX_PIN = TX_PIN;
     inst->pio = pio0;
-
+    
+    multicore_launch_core1(core1_entry); 
     I2S_init(inst);
 
     total_sample_count = 0;
@@ -158,21 +161,48 @@ void dma_isr_0()
     // calculate next samples for first half of audio buffer
     if (toggle_first_half)
     {
-        fill_audio_buffer(0, AUDIO_BUFFER_SIZE);
-        toggle_first_half = 0;
+        //buffer half [512-1023] is ready to be filled
+
+        //core 0 does first 256 samples [512-767]
+        //core 1 does next 256 samples  [768-1023]
+        multicore_fifo_push_blocking(768); 
+        multicore_fifo_push_blocking(1024);
+        fill_audio_buffer(512, 768); //core 0 does its half
+        multicore_fifo_pop_blocking(); //wait for core 1
+
         // calculate next samples for second half of audio buffer
     }
     else
     {
-        fill_audio_buffer(AUDIO_BUFFER_SIZE, AUDIO_BUFFER_SIZE * 2);
-        toggle_first_half = 1;
+        multicore_fifo_push_blocking(256); //start 
+        multicore_fifo_push_blocking(512);  //end
+        fill_audio_buffer(0, 256);  //core 0 work
+        multicore_fifo_pop_blocking(); //wait for core 1
+
     }
+    toggle_first_half = !toggle_first_half;
     gpio_put(14, 0);
 }
 
 double get_dma_interrupt_interval(int sample_rate, int pio_tx_fifo_length, int dma_transfer_bytes)
 {
     return (double)(dma_transfer_bytes) / ((double)(pio_tx_fifo_length) * (double)(sample_rate));
+}
+
+void core1_entry()
+{
+    int start;
+    int end;
+
+    while(1)
+    {
+        start = multicore_fifo_pop_blocking();
+        end = multicore_fifo_pop_blocking();
+
+        fill_audio_buffer(start, end);
+        //signal complete
+        multi_core_fifo_push_blocking(1);
+    }
 }
 
 void fill_audio_buffer(int start, int length){

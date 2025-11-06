@@ -50,6 +50,8 @@ void dma_isr_0();
 void fill_audio_buffer(int start, int length);
 //sample rate in HZ, the transfer FIFO length in bytes, number of bytes transferred by a dma channel
 double get_dma_interrupt_interval(int sample_rate, int pio_tx_fifo_length, int dma_transfer_bytes);
+void core1_entry();
+
 
 
 #endif 
