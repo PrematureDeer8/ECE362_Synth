@@ -5,9 +5,13 @@
 #include <limits.h>
 
 #include "I2S/I2S.h"
+#include "adc_ctrlr/adc_ctrlr.h"
 
 int main() {
     stdio_init_all();
+    //adc controller stuff
+    initialize_pins();
+    init_gpio_irq();
     //make a I2S instance for ease of use
     init_wavegen(5, 7, pio0, true);
     init_wavetables();
@@ -42,6 +46,16 @@ int main() {
         if((read_addr < start_address) || (read_addr > end_address)){
             // printf("Incorrect read address encountered: %lu\n", (unsigned long)(read_addr));
             printf("%lu, ", (unsigned long)(read_addr));
+        }
+        
+        //dami block (adc controller)
+        if(fx_button_flag){
+            printf("Fx button was triggered!\n");
+            fx_button_flag = false;
+        }
+        if(wavegen_button_flag){
+            printf("Wavegen button was pressed!\n");
+            wavegen_button_flag = false;
         }
     }
     free(inst);

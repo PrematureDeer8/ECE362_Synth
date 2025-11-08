@@ -6,18 +6,23 @@ static float delta_theta = 2.0f * M_PI / (float)(WAVETABLE_SIZE);
 float waveform_calc(float* wavetable){
     //turn phase into a discrete sample point
     float waveform = 0;
+    uint32_t norm_val = 0;
     for(int i = 0; i < NUM_NOTES; i++){
+        if(!keynote_status[i]){
+            continue;
+        }
         //added phase update loop inside waveform calc for faster CPU time
         if (phase[i] >= (2 * M_PI)){
             phase[i] -= 2 * M_PI;
         }
         phase[i] += phase_increment[i];
-        total_sample_count++;
+        // total_sample_count++;
+        norm_val++;
         uint index = ((uint)(phase[i] / delta_theta) % WAVETABLE_SIZE);
         waveform += wavetable[index];
         // waveform += sinf(phase[i]);
     }
-    return 0.6f * waveform / (float)(NUM_NOTES);
+    return 0.6f * waveform / (float)(norm_val);
     // return attack_env(samples, alpha, beta) * (*wavegen_func)(phase);
 }
 

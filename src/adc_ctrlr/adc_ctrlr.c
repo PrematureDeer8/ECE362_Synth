@@ -1,15 +1,18 @@
 #include "adc_ctrlr.h"
 
 
+
 // initialize gpio pins 24 and 23
 void initialize_pins(void){
     uint gpio_mask = (1 << FX_BUTTON_PIN) | (1 << WAVEGEN_BUTTON_PIN);
-    
-    gpio_set_function(FX_BUTTON_PIN, GPIO_FUNC_SIO);
-    gpio_set_function(WAVEGEN_BUTTON_PIN, GPIO_FUNC_SIO);
-    
     gpio_set_dir(FX_BUTTON_PIN, false);
     gpio_set_dir(WAVEGEN_BUTTON_PIN, false);
+    
+    gpio_put(FX_BUTTON_PIN, 0);
+    gpio_put(FX_BUTTON_PIN, 0);
+
+    gpio_set_function(FX_BUTTON_PIN, GPIO_FUNC_SIO);
+    gpio_set_function(WAVEGEN_BUTTON_PIN, GPIO_FUNC_SIO);
 
 }
 
@@ -35,13 +38,12 @@ void init_gpio_irq() {
 void gpio_input_isr(void){
 
     // triggered the interrupt,
-    printf("hello world\n");
     if (gpio_get_irq_event_mask(FX_BUTTON_PIN) == GPIO_IRQ_EDGE_RISE){
         gpio_acknowledge_irq(FX_BUTTON_PIN,GPIO_IRQ_EDGE_RISE); // acknowledges the interrupt request
-        printf("fx button asserted! \n");
+        fx_button_flag = true;
     } 
     if (gpio_get_irq_event_mask(WAVEGEN_BUTTON_PIN) == GPIO_IRQ_EDGE_RISE){
         gpio_acknowledge_irq(WAVEGEN_BUTTON_PIN, GPIO_IRQ_EDGE_RISE); // acknowledges the interrupt request
-        printf("wavegen button asserted! \n");
+        wavegen_button_flag = true;
     }
 }

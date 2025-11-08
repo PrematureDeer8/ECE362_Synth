@@ -5,7 +5,7 @@ volatile bool toggle_first_half = 1;
 int increment = 0;
 uint bitcrush_res = 16;
 //C4, C#, D, D#, E 
-/*
+
 float freq_table[NUM_NOTES] = {261.6f, // C4
                                277.1826f,  // C#
                                293.6648f, // D
@@ -18,14 +18,15 @@ float freq_table[NUM_NOTES] = {261.6f, // C4
                                440.0f,    // A
                                466.1638f, // A#
                                493.8833f  // B
-                            };*/
+                            };
 // cmajor 9th chord  
-float freq_table[NUM_NOTES] = {261.6f, // C4
+/*float freq_table[NUM_NOTES] = {261.6f, // C4
                                329.6276f, // E
                                391.9954f, // G
                                493.8833f,  // B
                                587.3295f // D5
-                            };
+                            };*/
+bool keynote_status[NUM_NOTES] = {1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 1};                           
 
 float get_clock_div_ratio(float sample_rate, float channels, float audio_bits, int instruction_count)
 {

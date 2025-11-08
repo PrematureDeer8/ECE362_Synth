@@ -19,7 +19,7 @@
 #define CHANNELS 2 // 2 channels for left/right
 #define AUDIO_BITS 16 //length of DAC resoultion
 #define AUDIO_BUFFER_SIZE 512 
-#define NUM_NOTES 5
+#define NUM_NOTES 12
 
 int dma_chan, dma_chan2;
 
@@ -36,6 +36,7 @@ volatile uint32_t audio_buffer[AUDIO_BUFFER_SIZE * 2] __attribute__((aligned(AUD
 uint32_t total_sample_count;
 float phase_increment[NUM_NOTES];
 float phase[NUM_NOTES];
+bool keynote_status[NUM_NOTES];
 
 
 I2S* init_wavegen(int BCLK, int TX_PIN, PIO chan, bool debug);
