@@ -178,19 +178,19 @@ double get_dma_interrupt_interval(int sample_rate, int pio_tx_fifo_length, int d
 void fill_audio_buffer(int start, int length){
     for (int i = start; i < length; i++)
         {
-            float audio_val = waveform_calc(sine_wavetable, phase, total_sample_count, 0.5f, SAMPLE_RATE * 10);
+            float audio_val = waveform_calc(sine_wavetable);
             int16_t sample = audio_val * INT16_MAX;
             sample = bitcrush(sample, bitcrush_res); 
             audio_buffer[i] = ((uint32_t)(sample) << 16) | ((uint16_t)(sample));
             // make sure phase stays at a reasonable level (does not increment forever)
-            for(int j = 0; j < NUM_NOTES; j++){
+            /*for(int j = 0; j < NUM_NOTES; j++){
                 if (phase[j] >= (2 * M_PI))
                 {
                     phase[j] -= 2 * M_PI;
                 }
                 phase[j] += phase_increment[j];
                 total_sample_count++;
-            }
+            }*/
         }
 }
 // sine wave

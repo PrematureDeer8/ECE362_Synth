@@ -13,7 +13,7 @@ float square_wavetable[WAVETABLE_SIZE];
 float saw_wavetable[WAVETABLE_SIZE];
 
 void init_wavetables();
-float waveform_calc(float* wavegen_func, float* phase, uint32_t samples, float alpha, float beta);
+float waveform_calc(float* wavegen_func);
 
 float attack_env(float x, float alpha, float beta);
 float sin_wave(float x);

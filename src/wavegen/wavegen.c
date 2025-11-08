@@ -3,10 +3,16 @@
 static float delta_theta = 2.0f * M_PI / (float)(WAVETABLE_SIZE);
 
 //wavegen
-float waveform_calc(float* wavetable, float* phase, uint32_t samples, float alpha, float beta){
+float waveform_calc(float* wavetable){
     //turn phase into a discrete sample point
     float waveform = 0;
     for(int i = 0; i < NUM_NOTES; i++){
+        //added phase update loop inside waveform calc for faster CPU time
+        if (phase[i] >= (2 * M_PI)){
+            phase[i] -= 2 * M_PI;
+        }
+        phase[i] += phase_increment[i];
+        total_sample_count++;
         uint index = ((uint)(phase[i] / delta_theta) % WAVETABLE_SIZE);
         waveform += wavetable[index];
         // waveform += sinf(phase[i]);
