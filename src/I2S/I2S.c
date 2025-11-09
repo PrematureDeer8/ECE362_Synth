@@ -1,4 +1,5 @@
 #include "I2S.h"
+#include "pico/multicore.h"
 
 volatile bool toggle_a = 0;
 volatile bool toggle_first_half = 1;
@@ -26,7 +27,7 @@ float freq_table[NUM_NOTES] = {261.6f, // C4
                                493.8833f,  // B
                                587.3295f // D5
                             };*/
-bool keynote_status[NUM_NOTES] = {1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 1};                           
+bool keynote_status[NUM_NOTES] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};                           
 
 float get_clock_div_ratio(float sample_rate, float channels, float audio_bits, int instruction_count)
 {
@@ -45,6 +46,7 @@ I2S *init_wavegen(int BCLK, int TX_PIN, PIO chan, bool debug)
     inst->TX_PIN = TX_PIN;
     inst->pio = pio0;
 
+    multicore_launch_core1(core1_entry);
     I2S_init(inst);
 
     total_sample_count = 0;
@@ -159,15 +161,31 @@ void dma_isr_0()
     // calculate next samples for first half of audio buffer
     if (toggle_first_half)
     {
-        fill_audio_buffer(0, AUDIO_BUFFER_SIZE);
-        toggle_first_half = 0;
+        //buffer half [512-1023] is ready to be filled
+
+        //core 0 does first 256 samples [512-767]
+        //core 1 does next 256 samples  [768-1023]
+        multicore_fifo_push_blocking(768); 
+        multicore_fifo_push_blocking(1024);
+        fill_audio_buffer(512, 768);
+        //fill_audio_buffer(0, AUDIO_BUFFER_SIZE);
+        multicore_fifo_pop_blocking(); //wait for core 1
+
+        // calculate next samples for second half of audio buffer
+        //toggle_first_half = 0;
         // calculate next samples for second half of audio buffer
     }
     else
     {
-        fill_audio_buffer(AUDIO_BUFFER_SIZE, AUDIO_BUFFER_SIZE * 2);
-        toggle_first_half = 1;
+        //fill buffer [0-512]
+        multicore_fifo_push_blocking(256); //start 
+        multicore_fifo_push_blocking(512);  //end 
+        fill_audio_buffer(0, 256); //core 0 work
+        //fill_audio_buffer(AUDIO_BUFFER_SIZE, AUDIO_BUFFER_SIZE * 2);
+        multicore_fifo_pop_blocking(); //wait for core 1
+        //toggle_first_half = 1;
     }
+    toggle_first_half = !toggle_first_half;
     gpio_put(14, 0);
 }
 
@@ -176,22 +194,40 @@ double get_dma_interrupt_interval(int sample_rate, int pio_tx_fifo_length, int d
     return (double)(dma_transfer_bytes) / ((double)(pio_tx_fifo_length) * (double)(sample_rate));
 }
 
+void core1_entry()
+{
+    int start;
+    int end;
+
+    while(1)
+    {
+        start = multicore_fifo_pop_blocking();
+        end = multicore_fifo_pop_blocking();
+
+        fill_audio_buffer(start, end);
+        //signal complete
+        multicore_fifo_push_blocking(1);
+    }
+}
+
+
 void fill_audio_buffer(int start, int length){
     for (int i = start; i < length; i++)
         {
+        
             float audio_val = waveform_calc(sine_wavetable);
             int16_t sample = audio_val * INT16_MAX;
             sample = bitcrush(sample, bitcrush_res); 
             audio_buffer[i] = ((uint32_t)(sample) << 16) | ((uint16_t)(sample));
             // make sure phase stays at a reasonable level (does not increment forever)
-            /*for(int j = 0; j < NUM_NOTES; j++){
-                if (phase[j] >= (2 * M_PI))
-                {
-                    phase[j] -= 2 * M_PI;
-                }
-                phase[j] += phase_increment[j];
-                total_sample_count++;
-            }*/
+            // for(int j = 0; j < NUM_NOTES; j++){
+            //     if (phase[j] >= (2 * M_PI))
+            //     {
+            //         phase[j] -= 2 * M_PI;
+            //     }
+            //     phase[j] += phase_increment[j];
+            //     total_sample_count++;
+            // }
         }
 }
 // sine wave
