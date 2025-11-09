@@ -9,12 +9,7 @@
 int main() {
     stdio_init_all();
     //make a I2S instance for ease of use
-<<<<<<< HEAD
     init_wavegen(5, 7, pio0, true);  //func in I2S, creates wave
-=======
-    init_wavegen(5, 7, pio0, true);
-    init_wavetables();
->>>>>>> bf542005e19763e0d3ff60af30dc282784aa8c4c
     uint32_t start_address = (uint32_t)(&audio_buffer[0]);
     uint32_t end_address = (uint32_t)(&audio_buffer[(2 * AUDIO_BUFFER_SIZE)- 1]);
     absolute_time_t start_time, end_time;

@@ -201,7 +201,7 @@ void core1_entry()
 
         fill_audio_buffer(start, end);
         //signal complete
-        multi_core_fifo_push_blocking(1);
+        multicore_fifo_push_blocking(1);
     }
 }
 
