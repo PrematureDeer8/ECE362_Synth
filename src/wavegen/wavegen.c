@@ -8,7 +8,7 @@ float waveform_calc(float* wavetable){
     float waveform = 0;
     uint32_t norm_val = 0;
     for(int i = 0; i < NUM_NOTES; i++){
-        if(!keynote_status[i]){
+        if(!keynote_status[i]){ //AR: consider replacing with "keynote_status[i] == 0"
             continue;
         }
         //added phase update loop inside waveform calc for faster CPU time
