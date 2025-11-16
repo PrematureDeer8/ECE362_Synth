@@ -45,11 +45,11 @@ void gpio_input_isr(void){
         fx_button_flag = true;
     } 
     if (gpio_get_irq_event_mask(WAVEGEN_BUTTON_PIN) == GPIO_IRQ_EDGE_RISE){
-        if (q_wavegen == SQUARE_WAVE) q_wavegen = SIN_WAVE; // resets the state to SIN_WAVE when pressed and q_wavegen is currently SQUARE_WAVE
+        
         gpio_acknowledge_irq(WAVEGEN_BUTTON_PIN, GPIO_IRQ_EDGE_RISE); // acknowledges the interrupt request
         wavegen_button_flag = true; // sets the wavegen_flag
 
         // changes the wavegen state when pressed and resets the state to SIN_WAVE when pressed and q_wavegen is currently SQUARE_WAVE
-        q_wavegen += 1;
+        q_wavegen = (q_wavegen + 1) % 3;
     }
 }
