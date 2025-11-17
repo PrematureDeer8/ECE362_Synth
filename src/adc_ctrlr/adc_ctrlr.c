@@ -4,7 +4,6 @@
 
 // initialize gpio pins 24 and 23
 void initialize_pins(void){
-    uint gpio_mask = (1 << FX_BUTTON_PIN) | (1 << WAVEGEN_BUTTON_PIN);
     gpio_set_dir(FX_BUTTON_PIN, false);
     gpio_set_dir(WAVEGEN_BUTTON_PIN, false);
     
@@ -23,6 +22,9 @@ void init_gpio_irq() {
 
     wavegen_button_flag = false;
     fx_button_flag = false;
+
+    // initialize the wavegen fsm to sin_wave
+    q_wavegen = SIN_WAVE;
 
     // assigns a handler for pins 23 and 24
     gpio_add_raw_irq_handler_masked((gpio_mask), gpio_input_isr);
@@ -43,7 +45,11 @@ void gpio_input_isr(void){
         fx_button_flag = true;
     } 
     if (gpio_get_irq_event_mask(WAVEGEN_BUTTON_PIN) == GPIO_IRQ_EDGE_RISE){
+        
         gpio_acknowledge_irq(WAVEGEN_BUTTON_PIN, GPIO_IRQ_EDGE_RISE); // acknowledges the interrupt request
-        wavegen_button_flag = true;
+        wavegen_button_flag = true; // sets the wavegen_flag
+
+        // changes the wavegen state when pressed and resets the state to SIN_WAVE when pressed and q_wavegen is currently SQUARE_WAVE
+        q_wavegen = (q_wavegen + 1) % 3;
     }
 }
