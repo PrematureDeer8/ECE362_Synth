@@ -29,7 +29,7 @@ float freq_table[NUM_NOTES] = {
                                493.8833f,  // B
                                587.3295f // D5
                             };*/
-bool keynote_status[NUM_NOTES] = {1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1};
+bool keynote_status[NUM_NOTES] = {1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1};
 
 float get_clock_div_ratio(float sample_rate, float channels, float audio_bits, int instruction_count)
 {
@@ -40,7 +40,7 @@ I2S *init_wavegen(int BCLK, int TX_PIN, PIO chan, bool debug)
 {
     for (int i = 0; i < NUM_NOTES; i++)
     {
-        phase_increment[i] = 4 * M_PI * freq_table[i] / SAMPLE_RATE;
+        phase_increment[i] = 4.0f * M_PI * freq_table[i] / SAMPLE_RATE;
         phase[0][i] = 0;
         phase[1][i] = phase_increment[i];
     }
@@ -220,7 +220,7 @@ void core1_entry()
 
 void fill_audio_buffer_core0(int start, int length)
 {
-    for (int i = start; i < length; i++)
+    for (int i = start; i < length; i+=2)
     {
         
         float audio_val = waveform_calc(sine_wavetable, 0);
@@ -245,7 +245,7 @@ void fill_audio_buffer_core0(int start, int length)
 }
 void fill_audio_buffer_core1(int start, int length)
 {
-    for (int i = start; i < length; i++)
+    for (int i = start; i < length; i+=2)
     {
         float audio_val = waveform_calc(sine_wavetable, 1);
         int16_t sample = audio_val * INT16_MAX;
