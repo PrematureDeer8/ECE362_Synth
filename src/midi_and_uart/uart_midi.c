@@ -5,6 +5,7 @@
 #include "pico/stdlib.h"
 #include "hardware/uart.h"
 #include "uart_midi.h"
+#include "I2S.h"
 
 #define BAUD_RATE 115200
 
@@ -56,7 +57,7 @@
 #define MIDI_NOTE_ON  (1 << 4)
 #define MIDI_BYTE_MAX 3
 #define MIDI_MAX_INDEX 2
-#define MIDI_TO_ENUM_OFFSET 40 // Todo, figure out default keyboard C enum
+#define MIDI_TO_ENUM_OFFSET 60 // TODO: figure out default keyboard C enum (C4 = 0d60)
 
 /*
        0     1     2
@@ -117,7 +118,7 @@ void pipe_midi_to_wavegen()
     bool note_status = pop_from_queue() & MIDI_NOTE_ON;
     int note_enum = pop_from_queue();
     int velocity = pop_from_queue();
-    // keynote_status[note_enum - MIDI_TO_ENUM_OFFSET] = note_status;
+    keynote_status[note_enum - MIDI_TO_ENUM_OFFSET] = note_status;
 }
 
 // Sets up DMA to transfer array of MIDI notes to wave gen function
