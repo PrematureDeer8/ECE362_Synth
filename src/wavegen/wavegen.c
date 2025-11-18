@@ -8,7 +8,7 @@ float waveform_calc(float *wavetable, int corenum)
     // turn phase into a discrete sample point
     float waveform = 0;
     uint32_t norm_val = 0;
-    for (int i = 0; i < NUM_NOTES; i++)
+    for (int i = 0; i < NUM_NOTES; i+=2)
     {
         if (!keynote_status[i])
         { // AR: consider replacing with "keynote_status[i] == 0"
