@@ -5,31 +5,30 @@ volatile bool toggle_a = 0;
 volatile bool toggle_first_half = 1;
 int increment = 0;
 uint bitcrush_res = 16;
+//C4, C#, D, D#, E 
 
-// C4, C#, D, D#, E
-
-float freq_table[NUM_NOTES] = {
-    261.6f,    // C4
-    277.1826f, // C#
-    293.6648f, // D
-    311.1270f, // D#
-    329.6276f, // E
-    349.2282f, // F
-    369.9944f, // F#
-    391.9954f, // G
-    415.3047f, // G#
-    440.0f,    // A
-    466.1638f, // A#
-    493.8833f  // B
-};
-// cmajor 9th chord
-/*float freq_table[NUM_NOTES] = {261.6f, // C4
+float freq_table[NUM_NOTES] = {261.6f, // C4
+                               277.1826f,  // C#
+                               293.6648f, // D
+                               311.1270f, // D#
                                329.6276f, // E
+                               349.2282f, // F
+                               369.9944f, // F#
                                391.9954f, // G
-                               493.8833f,  // B
-                               587.3295f // D5
-                            };*/
-bool keynote_status[NUM_NOTES] = {1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1};
+                               415.3047f, // G#
+                               440.0f,    // A
+                               466.1638f, // A#
+                               493.8833f  // B
+                            };
+// cmajor 9th chord  
+// float freq_table[NUM_NOTES] = {261.6f, // C4
+//                                329.6276f, // E
+//                                391.9954f, // G
+//                                493.8833f,  // B
+//                                587.3295f // D5
+//                             };
+// bool keynote_status[NUM_NOTES] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};   
+// bool keynote_status[NUM_NOTES] = {0, 0, 0, 0, 0}; 
 
 float get_clock_div_ratio(float sample_rate, float channels, float audio_bits, int instruction_count)
 {
@@ -38,12 +37,18 @@ float get_clock_div_ratio(float sample_rate, float channels, float audio_bits, i
 // initalize audio buffer, phase accumulator, pio statemachine
 I2S *init_wavegen(int BCLK, int TX_PIN, PIO chan, bool debug)
 {
-    for (int i = 0; i < NUM_NOTES; i++)
-    {
-        phase_increment[i] = 4.0f * M_PI * freq_table[i] / SAMPLE_RATE;
+    for(int i = 0; i < NUM_NOTES; i++){
+        //initialize phase info for each note
+        phase_increment[i] = 2 * M_PI * freq_table[i] / SAMPLE_RATE;
         phase[0][i] = 0;
-        phase[1][i] = phase_increment[i];
+        phase[1][i] = 0;
+        
+        //initialize key_status struct
+        key_status.index_status[i] = -1;
+        key_status.index_tracker[i] = -1;
+
     }
+    key_status.length = 0;
 
     inst = malloc(sizeof(*inst));
     inst->BCLK = BCLK;
@@ -56,11 +61,7 @@ I2S *init_wavegen(int BCLK, int TX_PIN, PIO chan, bool debug)
     total_sample_count = 0;
 
     // fill in audio buffer
-    multicore_fifo_push_blocking(1); //start
-    multicore_fifo_push_blocking(1024); //end
-    fill_audio_buffer_core0(0, 1024);
-    // fill_audio_buffer(0, AUDIO_BUFFER_SIZE);
-    multicore_fifo_pop_blocking(); // wait for core 1
+    fill_audio_buffer0(0, AUDIO_BUFFER_SIZE * 2);
 
     init_dma_for_I2S(inst, audio_buffer);
     // debug pins
@@ -168,38 +169,76 @@ void dma_isr_0()
     gpio_put(14, 1);
     // calculate next samples for first half of audio buffer
     if (toggle_first_half)
-    {
-        // buffer half [512-1023] is ready to be filled
-
-        // core 0 does first 256 samples [512-767]
-        // core 1 does next 256 samples  [768-1023]
-        multicore_fifo_push_blocking(513); //start
-        multicore_fifo_push_blocking(1024); //end
-        fill_audio_buffer_core0(512, 1024);
-        // fill_audio_buffer(0, AUDIO_BUFFER_SIZE);
-        multicore_fifo_pop_blocking(); // wait for core 1
-
-        // calculate next samples for second half of audio buffer
-        // toggle_first_half = 0;
+    {   
+        multicore_fifo_push_blocking(AUDIO_BUFFER_SIZE / 2);
+        multicore_fifo_push_blocking(AUDIO_BUFFER_SIZE);
+        fill_audio_buffer0(0, AUDIO_BUFFER_SIZE / 2);
+        // fill_audio_buffer1(AUDIO_BUFFER_SIZE / 2, AUDIO_BUFFER_SIZE);
+        for(int j = 0; j < key_status.length; j++){
+            int i = key_status.index_status[j];
+            phase[0][i] += 256 * phase_increment[i];
+        }
+        multicore_fifo_pop_blocking();
+        toggle_first_half = 0;
         // calculate next samples for second half of audio buffer
     }
     else
     {
-        // fill buffer [0-512]
-        multicore_fifo_push_blocking(1); // start
-        multicore_fifo_push_blocking(512); // end
-        fill_audio_buffer_core0(0, 512);         // core 0 work
-        // fill_audio_buffer(AUDIO_BUFFER_SIZE, AUDIO_BUFFER_SIZE * 2);
-        multicore_fifo_pop_blocking(); // wait for core 1
-        // toggle_first_half = 1;
+        multicore_fifo_push_blocking(AUDIO_BUFFER_SIZE + (AUDIO_BUFFER_SIZE / 2));
+        multicore_fifo_push_blocking(AUDIO_BUFFER_SIZE * 2);
+        fill_audio_buffer0(AUDIO_BUFFER_SIZE, AUDIO_BUFFER_SIZE + (AUDIO_BUFFER_SIZE / 2));
+        // fill_audio_buffer1(AUDIO_BUFFER_SIZE + (AUDIO_BUFFER_SIZE / 2), AUDIO_BUFFER_SIZE * 2);
+        for(int j = 0; j < key_status.length; j++){
+            int i = key_status.index_status[j];
+            phase[0][i] += 256 * phase_increment[i];
+        }
+        multicore_fifo_pop_blocking();
+        toggle_first_half = 1;
     }
-    toggle_first_half = !toggle_first_half;
     gpio_put(14, 0);
 }
 
 double get_dma_interrupt_interval(int sample_rate, int pio_tx_fifo_length, int dma_transfer_bytes)
 {
     return (double)(dma_transfer_bytes) / ((double)(pio_tx_fifo_length) * (double)(sample_rate));
+}
+
+void fill_audio_buffer0(int start, int length){
+    for (int i = start; i < length; i++)
+        {
+            float audio_val = waveform_calc(0, 0);
+            int16_t sample = audio_val * INT16_MAX;
+            sample = bitcrush(sample, bitcrush_res); 
+            audio_buffer[i] = ((uint32_t)(sample) << 16) | ((uint16_t)(sample));
+            // make sure phase stays at a reasonable level (does not increment forever)
+            /*for(int j = 0; j < NUM_NOTES; j++){
+                if (phase[j] >= (2 * M_PI))
+                {
+                    phase[j] -= 2 * M_PI;
+                }
+                phase[j] += phase_increment[j];
+                total_sample_count++;
+            }*/
+        }
+}
+
+void fill_audio_buffer1(int start, int length){
+    for (int i = start; i < length; i++)
+        {
+            float audio_val = waveform_calc(0, 1);
+            int16_t sample = audio_val * INT16_MAX;
+            sample = bitcrush(sample, bitcrush_res); 
+            audio_buffer[i] = ((uint32_t)(sample) << 16) | ((uint16_t)(sample));
+            // make sure phase stays at a reasonable level (does not increment forever)
+            /*for(int j = 0; j < NUM_NOTES; j++){
+                if (phase[j] >= (2 * M_PI))
+                {
+                    phase[j] -= 2 * M_PI;
+                }
+                phase[j] += phase_increment[j];
+                total_sample_count++;
+            }*/
+        }
 }
 
 void core1_entry()
@@ -211,63 +250,15 @@ void core1_entry()
     {
         start = multicore_fifo_pop_blocking();
         end = multicore_fifo_pop_blocking();
-
-        fill_audio_buffer_core1(start, end);
+        for(int j = 0; j < key_status.length; j++){
+            int i = key_status.index_status[j];
+            phase[1][i] += (AUDIO_BUFFER_SIZE / 2) * phase_increment[i];
+        }
+        fill_audio_buffer1(start, end);
         // signal complete
         multicore_fifo_push_blocking(1);
     }
 }
-
-void fill_audio_buffer_core0(int start, int length)
-{
-    for (int i = start; i < length; i+=2)
-    {
-        
-        float audio_val = waveform_calc(sine_wavetable, 0);
-        int16_t sample = audio_val * INT16_MAX;
-        sample = bitcrush(sample, bitcrush_res);
-        audio_buffer[i] = ((uint32_t)(sample) << 16) | ((uint16_t)(sample));
-        // make sure phase stays at a reasonable level (does not increment forever)
-        // for (int j = 0; j < NUM_NOTES; j++)
-        // {
-        //     if (keynote_status[j])
-        //     {
-        //         if (phase[0][j] >= (2 * M_PI))
-        //         {
-        //             phase[0][j] -= 2 * M_PI;
-        //         }
-        //         phase[0][j] += phase_increment[j];
-        //         total_sample_count++;
-        //     }
-        // }
-    }
-    
-}
-void fill_audio_buffer_core1(int start, int length)
-{
-    for (int i = start; i < length; i+=2)
-    {
-        float audio_val = waveform_calc(sine_wavetable, 1);
-        int16_t sample = audio_val * INT16_MAX;
-        sample = bitcrush(sample, bitcrush_res);
-        audio_buffer[i] = ((uint32_t)(sample) << 16) | ((uint16_t)(sample));
-        // make sure phase stays at a reasonable level (does not increment forever)
-        // for (int j = 0; j < NUM_NOTES; j++)
-        // {
-        //     if (keynote_status[j])
-        //     {
-        //         if (phase[1][j] >= (2 * M_PI))
-        //         {
-        //             phase[1][j] -= 2 * M_PI;
-        //         }
-        //         phase[1][j] += phase_increment[j];
-        //         total_sample_count++;
-        //     }
-        // }
-    }
-    
-}
-
 // sine wave
 
 /*float waveform_calc(float x){
