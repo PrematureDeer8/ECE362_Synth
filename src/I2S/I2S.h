@@ -45,7 +45,6 @@ volatile uint32_t audio_buffer[AUDIO_BUFFER_SIZE * 2] __attribute__((aligned(AUD
 uint32_t total_sample_count;
 volatile float phase_increment[NUM_NOTES];
 volatile float phase[2][NUM_NOTES];
-// bool keynote_status[NUM_NOTES];
 
 
 I2S* init_wavegen(int BCLK, int TX_PIN, PIO chan, bool debug);

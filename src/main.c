@@ -12,6 +12,7 @@ int main() {
     //adc controller stuff
     initialize_pins();
     init_gpio_irq();
+    init_pots();
     init_wavetables();
     //make a I2S instance for ease of use
     init_wavegen(5, 7, pio0, true);
@@ -32,27 +33,16 @@ int main() {
             }
             index = index % NUM_NOTES;
             // printf("Fx button was triggered!\n");
-            
-            //index is not currently in the index status
-            // if(toggle_key){
-            //     key_press(index);
-            // }else{
-            //     key_release(index);
-            // }
-            // //keynote_status[index] = !keynote_status[index];
-            // index++;
-            // printf("Number of notes played: %d\n", index);
-            /*if(index == 0 || index % 2){
-                index += 4;
-            }else{
-                index += 3;
-            }*/
+    
             fx_button_flag = false;
         }
         if(wavegen_button_flag){
             printf("Wavegen button was pressed!\n");
             wavegen_button_flag = false;
         }
+        //pots
+        update_pots();
+        sleep_ms(5);
     }
     free(inst);
 }

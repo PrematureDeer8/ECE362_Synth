@@ -1,4 +1,7 @@
 #include "wavegen.h"
+extern uint bitcrush_res;
+extern float amplitude;
+
 
 static float delta_theta = 2.0f * M_PI / (float)(WAVETABLE_SIZE);
 
@@ -29,7 +32,7 @@ float waveform_calc(int wave_sel, int corenum){
         waveform += wavetable[index];
         // waveform += sinf(phase[i]);
     }
-    return 0.6f * waveform / (float)(key_status.length);
+    return amplitude * waveform / (float)(key_status.length);
     // return attack_env(samples, alpha, beta) * (*wavegen_func)(phase);
 }
 

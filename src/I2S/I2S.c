@@ -4,7 +4,8 @@
 volatile bool toggle_a = 0;
 volatile bool toggle_first_half = 1;
 int increment = 0;
-uint bitcrush_res = 16;
+extern uint bitcrush_res;
+
 //C4, C#, D, D#, E 
 
 float freq_table[NUM_NOTES] = {261.6f, // C4

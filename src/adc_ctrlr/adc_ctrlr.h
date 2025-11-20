@@ -9,6 +9,9 @@
 
 #define WAVEGEN_BUTTON_PIN 21
 #define FX_BUTTON_PIN 26
+#define POT1_PIN 41 //amplitude
+//make sure right leg goes to V and left goes to GND
+#define POT2_PIN 42 //bitcrush
 
 //wavegen finite state machine
 typedef enum {
@@ -34,5 +37,7 @@ bool fx_button_flag;
 void initialize_pins(void);
 void gpio_input_isr(void);
 void init_gpio_irq(void);
+void init_pots(void);
+void update_pots(void);
 
 #endif
