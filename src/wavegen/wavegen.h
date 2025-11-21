@@ -8,12 +8,17 @@
 #define ATTACK_CUTOFF 10
 #define WAVETABLE_SIZE 8192
 
-float sine_wavetable[WAVETABLE_SIZE];
-float square_wavetable[WAVETABLE_SIZE];
-float saw_wavetable[WAVETABLE_SIZE];
+
+volatile float sine_wavetable[WAVETABLE_SIZE];
+volatile float square_wavetable[WAVETABLE_SIZE];
+volatile float saw_wavetable[WAVETABLE_SIZE];
 
 void init_wavetables();
-float waveform_calc(float* wavegen_func, int corenum);
+float waveform_calc(int wave_sel, int corenum);
+void core1_entry();
+
+void key_press(int index);
+void key_release(int index);
 
 float attack_env(float x, float alpha, float beta);
 float sin_wave(float x);

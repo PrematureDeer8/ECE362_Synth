@@ -1,6 +1,7 @@
 #include "adc_ctrlr.h"
 
-
+uint bitcrush_res = 16;
+float amplitude = 1.0f;
 
 // initialize gpio pins 24 and 23
 void initialize_pins(void){
@@ -14,6 +15,7 @@ void initialize_pins(void){
     gpio_set_function(WAVEGEN_BUTTON_PIN, GPIO_FUNC_SIO);
 
 }
+
 
 
 void init_gpio_irq() {
@@ -52,4 +54,28 @@ void gpio_input_isr(void){
         // changes the wavegen state when pressed and resets the state to SIN_WAVE when pressed and q_wavegen is currently SQUARE_WAVE
         q_wavegen = (q_wavegen + 1) % 3;
     }
+}
+//POTS
+void init_pots(void)
+{
+    adc_init();
+    adc_gpio_init(POT1_PIN);
+    adc_gpio_init(POT2_PIN);
+}
+void update_pots(void)
+{
+    //amplitude
+    adc_select_input(1); //channel 1 = GPIO27
+    uint16_t raw_amp = adc_read();
+    
+    float x = (float)raw_amp / 4095.0f;
+    amplitude = x * x; //helps smooth curve for better low-volume control
+
+    //bitcrush
+    adc_select_input(2); //channel 2 = GPIO28
+    uint16_t raw_bit = adc_read(); //0-4096
+
+    bitcrush_res = 1 + (raw_bit * 16) / 4095; //maps 1-16 bits
+    //printf("raw1=%u amp=%.4f  raw2=%u bits=%u\n", raw_amp, amplitude, raw_bit, bitcrush_res);
+
 }

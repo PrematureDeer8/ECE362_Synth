@@ -32,11 +32,19 @@ typedef struct _I2S {
 
 I2S* inst;
 
+//keynote struct: holds frequency index of notes that are currently being pressed
+typedef struct _keynote_status {
+    int index_status[NUM_NOTES];
+    int index_tracker[NUM_NOTES];
+    int length;
+} keynote_status;
+
+volatile keynote_status key_status;
+
 volatile uint32_t audio_buffer[AUDIO_BUFFER_SIZE * 2] __attribute__((aligned(AUDIO_BUFFER_SIZE * 2 * sizeof(uint32_t)))); // volatile is so that the compiler doesn't "optimize out"
 uint32_t total_sample_count;
-float phase_increment[NUM_NOTES];
-float phase[2][NUM_NOTES];
-bool keynote_status[NUM_NOTES];
+volatile float phase_increment[NUM_NOTES];
+volatile float phase[2][NUM_NOTES];
 
 
 I2S* init_wavegen(int BCLK, int TX_PIN, PIO chan, bool debug);
@@ -48,10 +56,10 @@ void I2S_init(I2S* inst); // this function will set the statemachine in I2S inst
 void init_dma_for_I2S(I2S* inst, volatile uint32_t* audio_buffer);
 void dma_isr_1();
 void dma_isr_0();
-void fill_audio_buffer_core0(int start, int length);
-void fill_audio_buffer_core1(int start, int length);
+void fill_audio_buffer0(int start, int length);
+void fill_audio_buffer1(int start, int length);
 //sample rate in HZ, the transfer FIFO length in bytes, number of bytes transferred by a dma channel
 double get_dma_interrupt_interval(int sample_rate, int pio_tx_fifo_length, int dma_transfer_bytes);
-void core1_entry();
+
 
 #endif 
