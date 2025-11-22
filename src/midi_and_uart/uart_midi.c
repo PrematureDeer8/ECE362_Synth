@@ -5,9 +5,9 @@
 #include "pico/stdlib.h"
 #include "hardware/uart.h"
 #include "uart_midi.h"
-#include "I2S.h"
+#include "I2S/I2S.h"
 
-#define BAUD_RATE 115200
+#define BAUD_RATE 31250
 
 /* MIDI pinout:
          , - ~ ~ ~ - ,
@@ -23,7 +23,7 @@
        ' - , _ _ _ ,  '
 */
 
-#define RP2350_PIN_MIDI_IN 36 // TODO: Define pin correctly
+#define RP2350_PIN_MIDI_IN 13 // AR: 13 is corect
 
 /* 3 bytes in a standard midi frame:
 
@@ -97,6 +97,8 @@ void attach_uart_irqs()
     uart_set_fifo_enabled(uart0, false); // TODO: check if we need the fifo enabled
     irq_set_exclusive_handler(UART0_IRQ, uart_rx_isr);
     irq_set_enabled(UART0_IRQ, true);
+    uart_set_irqs_enabled(uart0, 1, 0);
+    // uart_get_hw(uart0)->ifls &= (0 << UART_UARTIFLS_RXIFLSEL_LSB);
 }
 
 // TODO: make data available to wavegen function somehow, 
@@ -104,7 +106,7 @@ void attach_uart_irqs()
 //       talk to Gabe
 void uart_rx_isr() 
 {
-    uart_get_hw(uart0)->icr |= (1u << UART_UARTICR_RXIC_LSB); // acknowledge interrupt (writing 1 in this register clears the corresponding bit)
+    uart_get_hw(uart0)->icr = (1u << UART_UARTICR_RXIC_LSB); // acknowledge interrupt (writing 1 in this register clears the corresponding bit) 
     if (midi_buffer_front >= MIDI_BYTE_MAX) {
         return;
     }

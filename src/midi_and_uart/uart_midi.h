@@ -1,3 +1,5 @@
+#ifndef UART_MIDI_H
+#define UART_MIDI_H
 /*  Functions for receiving MIDI data over UART on RP2350.
 
     Description: Prepares RP2350 to raise UART interrupts when a user presses
@@ -28,3 +30,4 @@ void push_to_midi_fifo();
 
 // ??? Maybe a queue would be better?
 void pop_from_midi_fifo();
+#endif

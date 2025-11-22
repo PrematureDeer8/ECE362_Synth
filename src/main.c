@@ -7,6 +7,7 @@
 #include "I2S/I2S.h"
 #include "adc_ctrlr/adc_ctrlr.h"
 #include "SPI/spi_LCD.h"
+#include "midi_and_uart/uart_midi.h"
 
 int main()
 {
@@ -25,8 +26,11 @@ int main()
     key_press(0);
     key_press(4);
     key_press(7);
-    while (true)
-    {
+
+    init_uart();
+    attach_uart_irqs();
+
+    while (true) {
 
         // dami block (adc controller)
         if (fx_button_flag)
