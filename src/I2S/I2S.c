@@ -7,7 +7,19 @@ int increment = 0;
 uint bitcrush_res = 16;
 //C4, C#, D, D#, E 
 
-float freq_table[NUM_NOTES] = {261.6f, // C4
+float freq_table[NUM_NOTES] = {130.81,
+                               138.59,
+                               146.83,
+                               155.56,
+                               164.81,
+                               174.61,
+                               185.00,
+                               196.00,
+                               207.65,
+                               220.00,
+                               233.08,
+                               246.94,
+                               261.63f, // C4
                                277.1826f,  // C#
                                293.6648f, // D
                                311.1270f, // D#
@@ -18,7 +30,8 @@ float freq_table[NUM_NOTES] = {261.6f, // C4
                                415.3047f, // G#
                                440.0f,    // A
                                466.1638f, // A#
-                               493.8833f  // B
+                               493.8833f,  // B
+                               523.25f, // C5
                             };
 // cmajor 9th chord  
 // float freq_table[NUM_NOTES] = {261.6f, // C4
@@ -206,7 +219,7 @@ double get_dma_interrupt_interval(int sample_rate, int pio_tx_fifo_length, int d
 void fill_audio_buffer0(int start, int length){
     for (int i = start; i < length; i++)
         {
-            float audio_val = waveform_calc(0, 0);
+            float audio_val = waveform_calc(1, 0);
             int16_t sample = audio_val * INT16_MAX;
             sample = bitcrush(sample, bitcrush_res); 
             audio_buffer[i] = ((uint32_t)(sample) << 16) | ((uint16_t)(sample));
@@ -225,7 +238,7 @@ void fill_audio_buffer0(int start, int length){
 void fill_audio_buffer1(int start, int length){
     for (int i = start; i < length; i++)
         {
-            float audio_val = waveform_calc(0, 1);
+            float audio_val = waveform_calc(1, 1);
             int16_t sample = audio_val * INT16_MAX;
             sample = bitcrush(sample, bitcrush_res); 
             audio_buffer[i] = ((uint32_t)(sample) << 16) | ((uint16_t)(sample));

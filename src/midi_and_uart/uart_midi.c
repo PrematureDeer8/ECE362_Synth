@@ -1,12 +1,6 @@
-#include <stdio.h>
-#include <math.h>
-#include <stdlib.h>
-#include <string.h>
-#include "pico/stdlib.h"
-#include "hardware/uart.h"
 #include "uart_midi.h"
 
-#define BAUD_RATE 115200
+#define BAUD_RATE 31250
 
 /* MIDI pinout:
          , - ~ ~ ~ - ,
@@ -22,7 +16,7 @@
        ' - , _ _ _ ,  '
 */
 
-#define RP2350_PIN_MIDI_IN 36 // TODO: Define pin correctly
+#define RP2350_PIN_MIDI_IN 41 // TODO: Define pin correctly
 
 /* 3 bytes in a standard midi frame:
 
@@ -63,39 +57,29 @@
     |-----|-----|-----|
     f              b
 */
-char midi_rx_buffer[MIDI_BYTE_MAX];
-int midi_buffer_front = -1;
-int midi_buffer_back = 0;
+int midi_rx_buffer[MIDI_BYTE_MAX];
+// int midi_buffer_front = -1;
+int midi_buffer_len = 0;
   
 
 // Safely stores incoming MIDI data for processing. It discards messages if
 // the queue is already full (this should not be noticeable to the user unless
 // there's a timing hiccup.)
-void push_to_queue(char byte) 
-{
-    if (midi_buffer_front >= MIDI_MAX_INDEX) return; // queue full
-    midi_rx_buffer[midi_buffer_front++] = byte;
-}
-
-char pop_from_queue() 
-{
-    if (midi_buffer_front == midi_buffer_back - 1) return; // queue empty
-    return midi_rx_buffer[midi_buffer_back--];
-}
 
 // Sets UART GPIO PIN to UART function, initializes UART0
 void init_uart() 
 {
-    gpio_set_function(RP2350_PIN_MIDI_IN, UART_FUNCSEL_NUM(uart0, RP2350_PIN_MIDI_IN));
-    uart_init(uart0, BAUD_RATE);
+    gpio_set_function(RP2350_PIN_MIDI_IN, UART_FUNCSEL_NUM(uart1, RP2350_PIN_MIDI_IN));
+    uart_init(uart1, BAUD_RATE);
+    
 }
 
 void attach_uart_irqs() 
 {
-    uart_get_hw(uart0)->imsc |= (1u << UART_UARTIMSC_RXIM_LSB); // 0b1000 masks the "recieve interrupt" bit
-    uart_set_fifo_enabled(uart0, false); // TODO: check if we need the fifo enabled
-    irq_set_exclusive_handler(UART0_IRQ, uart_rx_isr);
-    irq_set_enabled(UART0_IRQ, true);
+    uart_set_irq_enables(uart1, 1, 0);
+    // uart_set_fifo_enabled(uart0, false); // TODO: check if we need the fifo enabled
+    irq_set_exclusive_handler(UART1_IRQ, uart_rx_isr);
+    irq_set_enabled(UART1_IRQ, true);
 }
 
 // TODO: make data available to wavegen function somehow, 
@@ -103,11 +87,18 @@ void attach_uart_irqs()
 //       talk to Gabe
 void uart_rx_isr() 
 {
-    uart_get_hw(uart0)->icr |= (1u << UART_UARTICR_RXIC_LSB); // acknowledge interrupt (writing 1 in this register clears the corresponding bit)
-    if (midi_buffer_front >= MIDI_BYTE_MAX) {
-        return;
+
+    uart_get_hw(uart1)->icr |= (1u << UART_UARTICR_RXIC_LSB); // acknowledge interrupt (writing 1 in this register clears the corresponding bit)
+    int data = uart_get_hw(uart1)->dr & 0xFF;
+    if(data != 248){
+        midi_rx_buffer[midi_buffer_len++] = data;
     }
-    push_to_queue(uart_get_hw(uart0)->dr); // read the UART rx buffer, push it to note queue
+    if(midi_buffer_len == 2){
+        int index = midi_rx_buffer[midi_buffer_len - 1] - 48;
+        key_press(index);
+    }
+    midi_buffer_len = midi_buffer_len % MIDI_BYTE_MAX;
+    
 }
 
 // Pops and interprets MIDI data in the receive FIFO.

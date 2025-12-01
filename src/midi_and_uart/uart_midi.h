@@ -1,3 +1,12 @@
+#ifndef __UART_MIDI_H
+#define __UART_MIDI_H
+#include <stdio.h>
+#include <math.h>
+#include <stdlib.h>
+#include <string.h>
+#include <wavegen/wavegen.h>
+#include "pico/stdlib.h"
+#include "hardware/uart.h"
 /*  Functions for receiving MIDI data over UART on RP2350.
 
     Description: Prepares RP2350 to raise UART interrupts when a user presses
@@ -7,6 +16,7 @@
     Author: Alex Resendiz
     Project: ECE 362 Final Design Project
 */
+volatile bool uart_trig;
 
 // Sets MIDI RX pin to UART function initializes UART0
 void init_uart();
@@ -28,3 +38,5 @@ void push_to_midi_fifo();
 
 // ??? Maybe a queue would be better?
 void pop_from_midi_fifo();
+
+#endif
