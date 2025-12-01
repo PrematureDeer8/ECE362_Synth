@@ -52,13 +52,15 @@ void key_press(int index){
         key_status.index_tracker[index] = key_status.length;
         key_status.length++;
     }else{
-        printf("Index key: %d is already pressed!\n", index);
+        //already has been pressed so release the key
+        key_release(index);
     }
 }
 
 void key_release(int index){
     if(key_status.index_tracker[index] == -1){
-        printf("Index key: %d is already considered released!\n", index);
+        //key has been released so press maybe?
+        key_press(index);
     }else{
         //put last valid index status element in the removed index
         key_status.index_status[key_status.index_tracker[index]] = key_status.index_status[key_status.length - 1];
