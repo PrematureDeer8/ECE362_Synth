@@ -28,32 +28,6 @@ int main()
     while (true) {
         
         //dami block (adc controller)
-        if(fx_button_flag){
-            /*if(index >= NUM_NOTES){
-                index = 0;
-            }*/
-            if(index == NUM_NOTES){
-                toggle_key = !toggle_key;
-            }
-            index = index % NUM_NOTES;
-            // printf("Fx button was triggered!\n");
-            
-            //index is not currently in the index status
-            // if(toggle_key){
-            //     key_press(index);
-            // }else{
-            //     key_release(index);
-            // }
-            // //keynote_status[index] = !keynote_status[index];
-            // index++;
-            // printf("Number of notes played: %d\n", index);
-            /*if(index == 0 || index % 2){
-                index += 4;
-            }else{
-                index += 3;
-            }*/
-            fx_button_flag = false;
-        }
         if(wavegen_button_flag){
             printf("Wavegen button was pressed!\n");
             wavegen_button_flag = false;

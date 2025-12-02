@@ -1,5 +1,5 @@
 #include "uart_midi.h"
-#include "I2S.h"
+#include "I2S/I2S.h"
 
 #define BAUD_RATE 31250
 
@@ -17,7 +17,7 @@
        ' - , _ _ _ ,  '
 */
 
-#define RP2350_PIN_MIDI_IN 41 // TODO: Define pin correctly
+#define RP2350_PIN_MIDI_IN 37 // TODO: Define pin correctly
 
 /* 3 bytes in a standard midi frame:
 
@@ -91,6 +91,7 @@ void uart_rx_isr()
 
     uart_get_hw(uart1)->icr |= (1u << UART_UARTICR_RXIC_LSB); // acknowledge interrupt (writing 1 in this register clears the corresponding bit)
     int data = uart_get_hw(uart1)->dr & 0xFF;
+
     if(data != 248){
         midi_rx_buffer[midi_buffer_len++] = data;
     }
@@ -104,13 +105,6 @@ void uart_rx_isr()
 
 // Pops and interprets MIDI data in the receive FIFO.
 // NOTE: active-low; 0 means key pressed, 1 means key depressed
-void pipe_midi_to_wavegen() 
-{
-    bool note_status = pop_from_queue() & MIDI_NOTE_ON;
-    int note_enum = pop_from_queue();
-    int velocity = pop_from_queue();
-    keynote_status[note_enum - MIDI_TO_ENUM_OFFSET] = note_status;
-}
 
 // Sets up DMA to transfer array of MIDI notes to wave gen function
 void init_dma() {
