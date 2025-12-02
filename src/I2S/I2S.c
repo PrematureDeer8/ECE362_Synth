@@ -220,7 +220,7 @@ double get_dma_interrupt_interval(int sample_rate, int pio_tx_fifo_length, int d
 void fill_audio_buffer0(int start, int length){
     for (int i = start; i < length; i++)
         {
-            float audio_val = waveform_calc(1, 0);
+            float audio_val = waveform_calc(q_wavegen, 0);
             int16_t sample = audio_val * INT16_MAX;
             sample = bitcrush(sample, bitcrush_res); 
             audio_buffer[i] = ((uint32_t)(sample) << 16) | ((uint16_t)(sample));
@@ -239,7 +239,7 @@ void fill_audio_buffer0(int start, int length){
 void fill_audio_buffer1(int start, int length){
     for (int i = start; i < length; i++)
         {
-            float audio_val = waveform_calc(1, 1);
+            float audio_val = waveform_calc(q_wavegen, 1);
             int16_t sample = audio_val * INT16_MAX;
             sample = bitcrush(sample, bitcrush_res); 
             audio_buffer[i] = ((uint32_t)(sample) << 16) | ((uint16_t)(sample));

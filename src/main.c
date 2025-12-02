@@ -8,6 +8,7 @@
 #include "adc_ctrlr/adc_ctrlr.h"
 #include "SPI/spi_LCD.h"
 #include "midi_and_uart/uart_midi.h"
+extern float amplitude;
 
 int main()
 {

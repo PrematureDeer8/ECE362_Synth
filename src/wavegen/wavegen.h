@@ -3,6 +3,7 @@
 
 #include "pico/stdlib.h"
 #include "I2S/I2S.h"
+#include "adc_ctrlr/adc_ctrlr.h"
 #include <math.h>
 
 #define ATTACK_CUTOFF 10
