@@ -1,5 +1,7 @@
 # Synthesizer
 
+![Project Poster](img/ECE362_Project_Poster.jpg)
+
 ## Design Overview
 The high level design of this synth can be visualized in the figure below: 
 ![High Level Design](img/highlevelsynthdiagram.jpeg)
